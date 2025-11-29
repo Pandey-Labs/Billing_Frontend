@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Card, Row, Col, Form } from "react-bootstrap";
+import { Card, Row, Col, Form, Button } from "react-bootstrap";
 import {
   BarChart,
   Bar,
@@ -13,7 +13,9 @@ import {
   AreaChart,
   Area,
 } from "recharts";
-import { useAppSelector } from "../store/hooks";
+import { useNavigate } from "react-router-dom";
+import { useAppSelector, useAppDispatch } from "../store/hooks";
+import { logout } from "../slices/authSlice";
 
 const paymentModes = ["All", "Cash", "UPI", "Card", "Wallet"];
 const dateRanges = ["Today", "Yesterday", "Weekly", "Monthly", "Custom"];
@@ -32,6 +34,13 @@ const Dashboard: React.FC = () => {
   const [chartType, setChartType] = useState<ChartType>("line");
   const sales = useAppSelector((s) => s.reports.sales) ?? [];
   const products = useAppSelector((s) => s.products.items) ?? [];
+  const dispatch = useAppDispatch();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    dispatch(logout());
+    navigate("/");
+  };
 
   const todayStr = new Date().toISOString().slice(0, 10);
   const yesterdayStr = new Date(Date.now() - 86400000)
@@ -263,7 +272,17 @@ const Dashboard: React.FC = () => {
               Monitor sales momentum, stock levels, and billing performance at a glance.
             </p>
           </div>
-          <div className="d-flex flex-column flex-md-row gap-3 filter-group">
+          <div className="d-flex flex-column flex-md-row gap-3 align-items-start align-items-md-center">
+            <Button
+              variant="outline-light"
+              size="sm"
+              onClick={handleLogout}
+              className="d-flex align-items-center gap-2"
+            >
+              <span>🚪</span>
+              Logout
+            </Button>
+            <div className="d-flex flex-column flex-md-row gap-3 filter-group">
             <Form.Select
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
@@ -297,6 +316,7 @@ const Dashboard: React.FC = () => {
                 </option>
               ))}
             </Form.Select>
+            </div>
           </div>
         </div>
       </div>

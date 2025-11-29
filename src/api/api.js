@@ -1,12 +1,26 @@
 // @ts-check
 
-const DEFAULT_BASE_URL = 'http://localhost:5000';
-
 const resolveBaseUrl = () => {
   // @ts-ignore - import.meta.env is available in Vite
-  const envUrl = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_API_URL : undefined;
+  const metaEnv = typeof import.meta !== 'undefined' ? import.meta.env : undefined;
+  // @ts-ignore
+  const envUrl = metaEnv?.VITE_API_URL;
+  // @ts-ignore
+  const mode = metaEnv?.MODE || 'development';
+  
   if (typeof envUrl === 'string' && envUrl.trim()) {
-    return envUrl.replace(/\/+$/, '');
+    const baseUrl = envUrl.trim().replace(/\/+$/, '');
+    // Log in development mode for debugging
+    if (mode === 'development') {
+      console.log(`[API] Using ${mode} environment: ${baseUrl}`);
+    }
+    return baseUrl;
+  }
+  
+  // Fallback to default if env variable is not set
+  const DEFAULT_BASE_URL = 'https://billing-backend-wje7.onrender.com';
+  if (mode === 'development') {
+    console.warn(`[API] VITE_API_URL not found, using default: ${DEFAULT_BASE_URL}`);
   }
   return DEFAULT_BASE_URL;
 };
