@@ -14,8 +14,17 @@ const slice = createSlice({
     name: 'customers',
     initialState,
     reducers: {
-        addCustomer(state, action: PayloadAction<Omit<Customer, 'id'>>) {
-            state.items.push({ id: uuidv4(), ...action.payload })
+        addCustomer(state, action: PayloadAction<Customer | Omit<Customer, 'id'>>) {
+            // Handle both full Customer (from API) and partial Customer (from local)
+            if ('id' in action.payload && action.payload.id) {
+                state.items.push(action.payload as Customer)
+            } else {
+                state.items.push({ id: uuidv4(), ...action.payload })
+            }
+            localStorage.setItem('customers', JSON.stringify(state.items))
+        },
+        setCustomers(state, action: PayloadAction<Customer[]>) {
+            state.items = action.payload
             localStorage.setItem('customers', JSON.stringify(state.items))
         },
         updateCustomer(state, action: PayloadAction<Customer>) {
@@ -31,5 +40,5 @@ const slice = createSlice({
 })
 
 
-export const { addCustomer, updateCustomer, removeCustomer } = slice.actions
+export const { addCustomer, setCustomers, updateCustomer, removeCustomer } = slice.actions
 export default slice.reducer

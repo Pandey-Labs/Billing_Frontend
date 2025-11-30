@@ -178,5 +178,85 @@ export const deleteProduct = async (id, options) => {
   return { id };
 };
 
+/**
+ * @param {{ token?: string; [key: string]: any }} [options]
+ */
+export const getDashboard = async (options) => {
+  return request('/api/dashboard', {
+    method: 'GET',
+    ...(options || {}),
+  });
+};
+
+/**
+ * @param {{ search?: string; token?: string; [key: string]: any }} [options]
+ */
+export const getCustomers = async (options) => {
+  const { search, ...rest } = options || {};
+  const queryParams = search ? `?search=${encodeURIComponent(search)}` : '';
+  return request(`/api/customers${queryParams}`, {
+    method: 'GET',
+    ...rest,
+  });
+};
+
+/**
+ * @param {string} id
+ * @param {{ token?: string; [key: string]: any }} [options]
+ */
+export const getCustomerById = async (id, options) => {
+  return request(`/api/customers/${id}`, {
+    method: 'GET',
+    ...(options || {}),
+  });
+};
+
+/**
+ * @param {Record<string, unknown>} customer
+ * @param {{ token?: string; [key: string]: any }} [options]
+ */
+export const createCustomer = async (customer, options) => {
+  return request('/api/customers', {
+    method: 'POST',
+    body: customer,
+    ...(options || {}),
+  });
+};
+
+/**
+ * @param {string} id
+ * @param {Record<string, unknown>} customer
+ * @param {{ token?: string; [key: string]: any }} [options]
+ */
+export const updateCustomer = async (id, customer, options) => {
+  return request(`/api/customers/${id}`, {
+    method: 'PUT',
+    body: customer,
+    ...(options || {}),
+  });
+};
+
+/**
+ * @param {string} id
+ * @param {{ token?: string; [key: string]: any }} [options]
+ */
+export const deleteCustomer = async (id, options) => {
+  await request(`/api/customers/${id}`, {
+    method: 'DELETE',
+    ...(options || {}),
+  });
+  return { id };
+};
+
+/**
+ * @param {{ token?: string; [key: string]: any }} [options]
+ */
+export const getSalesReport = async (options) => {
+  return request('/api/reports/sales', {
+    method: 'GET',
+    ...(options || {}),
+  });
+};
+
 export { ApiError };
 

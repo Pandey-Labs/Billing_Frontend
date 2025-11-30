@@ -318,7 +318,7 @@ const ProductForm: React.FC = () => {
     : 'Add Product';
 
   return (
-    <div className="products-page themed-page py-4">
+    <div className="products-page themed-page py-3 px-2">
       <div className="page-header card border-0 gradient-bg text-white mb-4 overflow-hidden">
         <div className="card-body d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-4">
           <div>
@@ -347,28 +347,31 @@ const ProductForm: React.FC = () => {
         <div className="card shadow-sm themed-card animate-slide-up form-shell" style={{ animationDelay: '200ms' }}>
           <div className="card-body">
             <div className="mb-4 d-flex align-items-center justify-content-between flex-wrap gap-2">
-              <div className="form-check form-switch mb-0">
-                <input
-                  className="form-check-input accent-switch"
-                  type="checkbox"
-                  id="isVariant"
-                  checked={isVariant}
-                  disabled={editing && Boolean(existing?.parentProductId)}
-                  onChange={(e) => {
-                    if (!editing || !existing?.parentProductId) {
-                      setIsVariant(e.target.checked);
-                      if (!e.target.checked) {
-                        setParentProductId('');
-                        setParentProductSearch('');
-                      }
-                    }
-                  }}
-                />
-                <label className="form-check-label" htmlFor="isVariant">
+              <div className="d-flex align-items-center gap-3">
+                <label htmlFor="isVariant" style={{ margin: 0, cursor: editing && Boolean(existing?.parentProductId) ? 'not-allowed' : 'pointer' }}>
                   {editing && existing?.parentProductId
                     ? 'This is a variant (locked)'
                     : 'Create as variant of existing product'}
                 </label>
+                <div className="checkbox-wrapper-8">
+                  <input
+                    className="tgl tgl-skewed"
+                    type="checkbox"
+                    id="isVariant"
+                    checked={isVariant}
+                    disabled={editing && Boolean(existing?.parentProductId)}
+                    onChange={(e) => {
+                      if (!editing || !existing?.parentProductId) {
+                        setIsVariant(e.target.checked);
+                        if (!e.target.checked) {
+                          setParentProductId('');
+                          setParentProductSearch('');
+                        }
+                      }
+                    }}
+                  />
+                  <label className="tgl-btn" data-tg-off="OFF" data-tg-on="ON" htmlFor="isVariant"></label>
+                </div>
               </div>
               <div className="badge bg-light text-dark px-3 py-2 shadow-sm">
                 {isVariant ? 'Variant mode on' : 'Standard product'}
@@ -409,7 +412,9 @@ const ProductForm: React.FC = () => {
 
             <form onSubmit={handleSubmit} className="row g-3 form-grid" noValidate>
               <div className="col-md-6">
-                <label className="form-label">Product Name</label>
+                <label className="form-label">
+                  Product Name <span style={{ color: 'red' }}>*</span>
+                </label>
                 <input
                   className={`form-control glow-control${errors.name ? ' is-invalid' : ''}`}
                   name="name"
@@ -422,7 +427,9 @@ const ProductForm: React.FC = () => {
                 {errors.name && <div className="invalid-feedback d-block">{errors.name}</div>}
               </div>
               <div className="col-md-6">
-                <label className="form-label">Category</label>
+                <label className="form-label">
+                  Category <span style={{ color: 'red' }}>*</span>
+                </label>
                 <input
                   className={`form-control glow-control${errors.category ? ' is-invalid' : ''}`}
                   name="category"
@@ -434,7 +441,9 @@ const ProductForm: React.FC = () => {
                 {errors.category && <div className="invalid-feedback d-block">{errors.category}</div>}
               </div>
               <div className="col-md-6">
-                <label className="form-label">SKU / Product Code</label>
+                <label className="form-label">
+                  SKU / Product Code <span style={{ color: 'red' }}>*</span>
+                </label>
                 <input
                   className={`form-control glow-control${errors.sku ? ' is-invalid' : ''}`}
                   name="sku"
@@ -445,7 +454,9 @@ const ProductForm: React.FC = () => {
                 {errors.sku && <div className="invalid-feedback d-block">{errors.sku}</div>}
               </div>
               <div className="col-md-6">
-                <label className="form-label">Unit</label>
+                <label className="form-label">
+                  Unit <span style={{ color: 'red' }}>*</span>
+                </label>
                 <input
                   className={`form-control glow-control${errors.unit ? ' is-invalid' : ''}`}
                   name="unit"
@@ -456,7 +467,9 @@ const ProductForm: React.FC = () => {
                 {errors.unit && <div className="invalid-feedback d-block">{errors.unit}</div>}
               </div>
               <div className="col-md-6">
-                <label className="form-label">Purchase Price</label>
+                <label className="form-label">
+                  Purchase Price <span style={{ color: 'red' }}>*</span>
+                </label>
                 <input
                   className={`form-control glow-control${errors.purchasePrice ? ' is-invalid' : ''}`}
                   name="purchasePrice"
@@ -468,7 +481,9 @@ const ProductForm: React.FC = () => {
                 {errors.purchasePrice && <div className="invalid-feedback d-block">{errors.purchasePrice}</div>}
               </div>
               <div className="col-md-6">
-                <label className="form-label">Selling Price</label>
+                <label className="form-label">
+                  Selling Price <span style={{ color: 'red' }}>*</span>
+                </label>
                 <input
                   className={`form-control glow-control${errors.sellingPrice ? ' is-invalid' : ''}`}
                   name="sellingPrice"
@@ -480,7 +495,9 @@ const ProductForm: React.FC = () => {
                 {errors.sellingPrice && <div className="invalid-feedback d-block">{errors.sellingPrice}</div>}
               </div>
               <div className="col-md-6">
-                <label className="form-label">Tax Rate (%)</label>
+                <label className="form-label">
+                  Tax Rate (%) <span style={{ color: 'red' }}>*</span>
+                </label>
                 <input
                   className={`form-control glow-control${errors.taxRate ? ' is-invalid' : ''}`}
                   name="taxRate"
@@ -492,7 +509,9 @@ const ProductForm: React.FC = () => {
                 {errors.taxRate && <div className="invalid-feedback d-block">{errors.taxRate}</div>}
               </div>
               <div className="col-md-6">
-                <label className="form-label">Stock Quantity</label>
+                <label className="form-label">
+                  Stock Quantity <span style={{ color: 'red' }}>*</span>
+                </label>
                 <input
                   className={`form-control glow-control${errors.stock ? ' is-invalid' : ''}`}
                   name="stock"
@@ -697,29 +716,33 @@ const ProductForm: React.FC = () => {
                 </select>
               </div>
               <div className="col-md-6 d-flex align-items-center flex-wrap gap-3">
-                <div className="form-check">
-                  <input
-                    className="form-check-input accent-switch"
-                    type="checkbox"
-                    id="isFavorite"
-                    name="isFavorite"
-                    checked={form.isFavorite}
-                    onChange={handleChange}
-                  />
-                  <label className="form-check-label" htmlFor="isFavorite">
+                <div className="d-flex align-items-center gap-2">
+                  <div className="checkbox-wrapper-19">
+                    <input
+                      type="checkbox"
+                      id="isFavorite"
+                      name="isFavorite"
+                      checked={form.isFavorite}
+                      onChange={handleChange}
+                    />
+                    <label htmlFor="isFavorite" className={`check-box ${form.isFavorite ? 'checked' : ''}`}></label>
+                  </div>
+                  <label htmlFor="isFavorite" style={{ cursor: 'pointer', margin: 0 }}>
                     Mark as favorite item
                   </label>
                 </div>
-                <div className="form-check">
-                  <input
-                    className="form-check-input accent-switch"
-                    type="checkbox"
-                    id="isBestSeller"
-                    name="isBestSeller"
-                    checked={form.isBestSeller}
-                    onChange={handleChange}
-                  />
-                  <label className="form-check-label" htmlFor="isBestSeller">
+                <div className="d-flex align-items-center gap-2">
+                  <div className="checkbox-wrapper-19">
+                    <input
+                      type="checkbox"
+                      id="isBestSeller"
+                      name="isBestSeller"
+                      checked={form.isBestSeller}
+                      onChange={handleChange}
+                    />
+                    <label htmlFor="isBestSeller" className={`check-box ${form.isBestSeller ? 'checked' : ''}`}></label>
+                  </div>
+                  <label htmlFor="isBestSeller" style={{ cursor: 'pointer', margin: 0 }}>
                     Flag as best-selling
                   </label>
                 </div>

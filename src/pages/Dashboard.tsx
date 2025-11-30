@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Card, Row, Col, Form, Button } from "react-bootstrap";
 import {
   BarChart,
@@ -16,6 +16,10 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useAppSelector, useAppDispatch } from "../store/hooks";
 import { logout } from "../slices/authSlice";
+import { setSales } from "../slices/reportsSlice";
+import { fetchProducts } from "../slices/productsSlice";
+import { getDashboard, ApiError } from "../api/api";
+import ApiErrorFallback from "../components/ApiErrorFallback";
 
 const paymentModes = ["All", "Cash", "UPI", "Card", "Wallet"];
 const dateRanges = ["Today", "Yesterday", "Weekly", "Monthly", "Custom"];
@@ -32,10 +36,82 @@ const Dashboard: React.FC = () => {
   const [dateFilter, setDateFilter] = useState<string>("Today");
   const [paymentFilter, setPaymentFilter] = useState<string>("All");
   const [chartType, setChartType] = useState<ChartType>("line");
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [hasApiError, setHasApiError] = useState(false);
   const sales = useAppSelector((s) => s.reports.sales) ?? [];
   const products = useAppSelector((s) => s.products.items) ?? [];
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      setHasApiError(false);
+      console.log('[Dashboard] Fetching dashboard data from API...');
+      const data = await getDashboard();
+      console.log('[Dashboard] Data received:', data);
+      
+      // Validate API response
+      if (!data || typeof data !== 'object') {
+        throw new Error('Invalid API response format');
+      }
+        
+        // Update sales in Redux store - map to ensure all required fields are present
+        if (data && data.sales && Array.isArray(data.sales)) {
+          const mappedSales = data.sales.map((sale) => ({
+            id: sale.id,
+            date: sale.date,
+            total: sale.total || 0,
+            paymentMethod: sale.paymentMethod || "Cash",
+            items: sale.items || [],
+            subtotal: sale.subtotal || 0,
+            tax: sale.tax || 0,
+            discount: sale.discount || 0,
+            customer: (sale.customer && typeof sale.customer === 'object' && 'id' in sale.customer && 'name' in sale.customer) 
+              ? sale.customer as { id: string; name: string; phone?: string; email?: string }
+              : null,
+          }));
+          dispatch(setSales(mappedSales));
+          console.log('[Dashboard] Sales updated in Redux:', mappedSales.length, 'items');
+        } else {
+          console.warn('[Dashboard] No sales data in response');
+          dispatch(setSales([]));
+        }
+        
+        // Update products in Redux store (if not already loaded)
+        if (data && data.products && Array.isArray(data.products)) {
+          console.log('[Dashboard] Products data received:', data.products.length, 'items');
+          // Check if products are already loaded, if not fetch them
+          if (products.length === 0) {
+            console.log('[Dashboard] Fetching products...');
+            dispatch(fetchProducts());
+          }
+        } else {
+          console.warn('[Dashboard] No products data in response');
+        }
+        setHasApiError(false);
+      } catch (err) {
+        console.error("[Dashboard] Failed to fetch dashboard data:", err);
+        setHasApiError(true);
+        if (err instanceof ApiError) {
+          console.error("[Dashboard] API Error:", err.status, err.message);
+          setError(`API Error (${err.status}): ${err.message}`);
+        } else if (err instanceof Error) {
+          console.error("[Dashboard] Error:", err.message);
+          setError(`Failed to load dashboard data: ${err.message}`);
+        } else {
+          setError("Failed to load dashboard data. The API response could not be handled.");
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [dispatch, products.length]);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -257,8 +333,54 @@ const Dashboard: React.FC = () => {
     [filteredSales.length, lowStock, totalFilteredSales, totalStock]
   );
 
+  if (loading) {
+    return (
+      <div className="dashboard-page themed-page py-4">
+        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: "400px" }}>
+          <div className="text-center">
+            <div className="spinner-border text-primary" role="status">
+              <span className="visually-hidden">Loading...</span>
+            </div>
+            <p className="mt-3 text-muted">Loading dashboard data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (hasApiError && error) {
+    return (
+      <div className="dashboard-page themed-page py-4 px-3">
+        <ApiErrorFallback 
+          error={error}
+          onRetry={fetchDashboardData}
+          title="Unable to Load Dashboard"
+          icon="bi-speedometer2"
+        />
+      </div>
+    );
+  }
+
+  if (error && !hasApiError) {
+    return (
+      <div className="dashboard-page themed-page py-4">
+        <div className="alert alert-warning" role="alert">
+          <h4 className="alert-heading">Warning</h4>
+          <p>{error}</p>
+          <hr />
+          <button
+            className="btn btn-primary"
+            onClick={() => window.location.reload()}
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="dashboard-page themed-page py-4">
+    <div className="dashboard-page themed-page pt-3 pb-1 px-2">
       <div className="page-header card border-0 gradient-bg text-white mb-4 overflow-hidden">
         <div className="card-body d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-4">
           <div>
@@ -274,13 +396,28 @@ const Dashboard: React.FC = () => {
           </div>
           <div className="d-flex flex-column flex-md-row gap-3 align-items-start align-items-md-center">
             <Button
-              variant="outline-light"
-              size="sm"
+              variant="light"
+              size="lg"
               onClick={handleLogout}
-              className="d-flex align-items-center gap-2"
+              className="d-flex align-items-center justify-content-center shadow-sm logout-btn"
+              style={{
+                width: '48px',
+                height: '48px',
+                padding: 0,
+                borderRadius: '50%',
+                transition: 'all 0.2s ease',
+              }}
+              title="Logout"
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '';
+              }}
             >
-              <span>🚪</span>
-              Logout
+              <i className="bi bi-box-arrow-right" style={{ fontSize: '1.2rem' }}></i>
             </Button>
             <div className="d-flex flex-column flex-md-row gap-3 filter-group">
             <Form.Select
@@ -321,11 +458,11 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      <Row className="mb-4 g-3">
+      <Row className="mb-3 g-3">
         {quickStats.map((stat, index) => (
           <Col md={3} sm={6} key={stat.label}>
             <Card
-              className="dashboard-card floating-card animate-slide-up text-center"
+              className="dashboard-card floating-card animate-slide-up text-center p-3"
               style={{ animationDelay: `${index * 70}ms` }}
             >
               <h6 className="text-muted text-uppercase small tracking-wide">{stat.label}</h6>
@@ -335,7 +472,7 @@ const Dashboard: React.FC = () => {
         ))}
       </Row>
 
-      <Card className="p-3 mb-4 shadow-sm rounded-4 themed-card animate-slide-up" style={{ animationDelay: "180ms" }}>
+      <Card className="p-3 shadow-sm rounded-4 themed-card animate-slide-up" style={{ animationDelay: "180ms" }}>
         <div className="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
           <h6 className="fw-semibold mb-0">
             Sales ({dateFilter}, {paymentFilter})

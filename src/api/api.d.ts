@@ -42,3 +42,68 @@ export declare function deleteProduct(
   options?: RequestInit & { token?: string },
 ): Promise<{ id: string }>;
 
+export interface DashboardData {
+  sales: Array<{
+    id: string;
+    date: string;
+    total: number;
+    paymentMethod?: string;
+    items: Array<{
+      id: string;
+      productId: string;
+      name: string;
+      price: number;
+      qty: number;
+    }>;
+    subtotal?: number;
+    tax?: number;
+    discount?: number;
+    customer?: unknown | null;
+  }>;
+  products: Array<{
+    id: string;
+    name: string;
+    stock: number;
+    price: number;
+    sku?: string;
+    category?: string;
+  }>;
+}
+
+export declare function getDashboard(
+  options?: RequestInit & { token?: string },
+): Promise<DashboardData>;
+
+import type { Customer } from '../types';
+
+export declare function getCustomers(
+  options?: RequestInit & { token?: string; search?: string },
+): Promise<Customer[]>;
+
+export declare function getCustomerById(
+  id: string,
+  options?: RequestInit & { token?: string },
+): Promise<Customer>;
+
+export declare function createCustomer(
+  customer: Partial<Customer>,
+  options?: RequestInit & { token?: string },
+): Promise<Customer>;
+
+export declare function updateCustomer(
+  id: string,
+  customer: Partial<Customer>,
+  options?: RequestInit & { token?: string },
+): Promise<Customer>;
+
+export declare function deleteCustomer(
+  id: string,
+  options?: RequestInit & { token?: string },
+): Promise<{ id: string }>;
+
+import type { Invoice } from '../types';
+
+export declare function getSalesReport(
+  options?: RequestInit & { token?: string },
+): Promise<Invoice[]>;
+

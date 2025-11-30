@@ -1,6 +1,8 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { Modal, Button } from "react-bootstrap";
+import { toast } from "../utils/toast";
 import {
   clearCart,
   updateQty,
@@ -9,10 +11,12 @@ import {
 } from "../slices/cartSlice";
 import { addSale } from "../slices/reportsSlice";
 import { deductStock } from "../slices/productsSlice";
-import { addCustomer } from "../slices/customersSlice";
+import { setCustomers } from "../slices/customersSlice";
 import { useAppSelector } from "../store/hooks";
 import type { RootState } from "../store/store";
 import type { Customer, Product, Invoice } from "../types";
+import { getCustomers, createCustomer, ApiError } from "../api/api";
+import ApiErrorFallback from "../components/ApiErrorFallback";
 
 interface RazorpayOptions {
   key: string;
@@ -67,6 +71,85 @@ const Billing: React.FC = () => {
     typeof window !== "undefined" ? window.innerWidth < 992 : false
   );
   const [processingPayment, setProcessingPayment] = useState(false);
+  const [loadingCustomers, setLoadingCustomers] = useState(false);
+  const [apiCustomers, setApiCustomers] = useState<Customer[]>([]);
+  const [customerApiError, setCustomerApiError] = useState<string | null>(null);
+  const [hasCustomerApiError, setHasCustomerApiError] = useState(false);
+  const [recentlyCreatedCustomers, setRecentlyCreatedCustomers] = useState<Customer[]>([]);
+
+  // Fetch customers from API on mount
+  const fetchCustomers = async () => {
+    try {
+      setLoadingCustomers(true);
+      setCustomerApiError(null);
+      setHasCustomerApiError(false);
+      const data = await getCustomers();
+      
+      // Validate API response
+      if (!data || !Array.isArray(data)) {
+        throw new Error('Invalid API response format');
+      }
+      
+      setApiCustomers(data || []);
+      dispatch(setCustomers(data || []));
+      setHasCustomerApiError(false);
+    } catch (error) {
+      console.error('[Billing] Failed to fetch customers:', error);
+      setHasCustomerApiError(true);
+      if (error instanceof ApiError) {
+        setCustomerApiError(`Failed to load customers: ${error.message}`);
+      } else if (error instanceof Error) {
+        setCustomerApiError(`Failed to load customers: ${error.message}`);
+      } else {
+        setCustomerApiError('Failed to load customers. The API response could not be handled.');
+      }
+      // Fallback to Redux store if API fails
+      setApiCustomers(customers);
+    } finally {
+      setLoadingCustomers(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCustomers();
+  }, [dispatch]);
+
+  // Search customers from API when modalSearch changes
+  useEffect(() => {
+    if (!showCustomerModal || modalMode !== "select") return;
+    
+    const searchCustomers = async () => {
+      try {
+        setLoadingCustomers(true);
+        const data = await getCustomers({ search: modalSearch });
+        setApiCustomers(data || []);
+      } catch (error) {
+        console.error('[Billing] Failed to search customers:', error);
+        // Fallback to local filtering
+        const term = modalSearch.toLowerCase();
+        if (!term) {
+          setApiCustomers(customers);
+        } else {
+          setApiCustomers(
+            customers.filter(
+              (c) =>
+                c.name.toLowerCase().includes(term) ||
+                (c.email && c.email.toLowerCase().includes(term)) ||
+                (c.phone && c.phone.toLowerCase().includes(term))
+            )
+          );
+        }
+      } finally {
+        setLoadingCustomers(false);
+      }
+    };
+
+    const timeoutId = setTimeout(() => {
+      searchCustomers();
+    }, 300); // Debounce search
+
+    return () => clearTimeout(timeoutId);
+  }, [modalSearch, showCustomerModal, modalMode, customers]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -81,7 +164,7 @@ const Billing: React.FC = () => {
   useEffect(() => {
     if (!pendingCustomerKey) return;
     const [nameKey, emailKey, phoneKey] = pendingCustomerKey.split("||");
-    const match = customers.find((c) =>
+    const match = apiCustomers.find((c) =>
       c.name.trim().toLowerCase() === nameKey &&
       (c.email ? c.email.trim().toLowerCase() : "") === emailKey &&
       (c.phone ? c.phone.trim() : "") === phoneKey
@@ -90,18 +173,11 @@ const Billing: React.FC = () => {
       setSelectedCustomer(match);
       setPendingCustomerKey(null);
     }
-  }, [customers, pendingCustomerKey]);
+  }, [apiCustomers, pendingCustomerKey]);
 
   const filteredModalCustomers = useMemo(() => {
-    const term = modalSearch.toLowerCase();
-    if (!term) return customers;
-    return customers.filter(
-      (c) =>
-        c.name.toLowerCase().includes(term) ||
-        (c.email && c.email.toLowerCase().includes(term)) ||
-        (c.phone && c.phone.toLowerCase().includes(term))
-    );
-  }, [customers, modalSearch]);
+    return apiCustomers;
+  }, [apiCustomers]);
 
   // Totals
   const subtotal = cart.items.reduce((sum, i) => {
@@ -261,14 +337,14 @@ const Billing: React.FC = () => {
 
     const scriptLoaded = await loadRazorpayScript();
     if (!scriptLoaded || !window.Razorpay) {
-      alert("Unable to load Razorpay checkout. Please try again.");
+      toast.error("Unable to load Razorpay checkout. Please try again.");
       setProcessingPayment(false);
       return;
     }
 
     const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID;
     if (!razorpayKey) {
-      alert("Razorpay key not configured. Set VITE_RAZORPAY_KEY_ID in your environment.");
+      toast.error("Razorpay key not configured. Set VITE_RAZORPAY_KEY_ID in your environment.");
       setProcessingPayment(false);
       return;
     }
@@ -333,13 +409,13 @@ const Billing: React.FC = () => {
       const razorpayInstance = new window.Razorpay(paymentOptions);
       razorpayInstance.on("payment.failed", (response: unknown) => {
         console.error("Payment failed", response);
-        alert("Payment failed or cancelled. Please try again.");
+        toast.error("Payment failed or cancelled. Please try again.");
         setProcessingPayment(false);
       });
       razorpayInstance.open();
     } catch (error) {
       console.error("Failed to start Razorpay checkout", error);
-      alert("Unable to start payment. Please try again.");
+      toast.error("Unable to start payment. Please try again.");
       setProcessingPayment(false);
     }
   };
@@ -378,56 +454,75 @@ const Billing: React.FC = () => {
     win.close();
   };
 
+  // Show error fallback if customer API failed and no customers available
+  if (hasCustomerApiError && customerApiError && apiCustomers.length === 0 && customers.length === 0) {
+    return (
+      <div className="billing-page themed-page py-4 px-3">
+        <ApiErrorFallback 
+          error={customerApiError}
+          onRetry={fetchCustomers}
+          title="Unable to Load Customers"
+          icon="bi-people-fill"
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className="billing-page themed-page py-4">
-      <div className="page-header card border-0 gradient-bg text-white mb-4 overflow-hidden">
-        <div className="card-body d-flex flex-column flex-xl-row justify-content-between align-items-start align-items-xl-center gap-4">
-          <div>
-            <h3 className="fw-bold mb-1 d-flex align-items-center gap-2">
-              <span role="img" aria-label="billing">
-                🧾
-              </span>
-              Billing
-            </h3>
-            <p className="mb-0 text-white-50">
-              Scan, add, and bill products faster with real-time stock updates.
-            </p>
+    <div className="billing-page themed-page py-3 px-2">
+      {/* Redesigned Header Section */}
+      <div className="mb-4">
+        <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-3">
+          <div className="d-flex align-items-center gap-3">
+            <div 
+              className="bg-primary bg-opacity-10 rounded-3 d-flex align-items-center justify-content-center"
+              style={{ width: '50px', height: '50px' }}
+            >
+              <i className="bi bi-cart-check text-primary" style={{ fontSize: '1.5rem' }}></i>
+            </div>
+            <div>
+              <h4 className="mb-0 fw-bold text-dark">Quick Billing</h4>
+              <p className="mb-0 small text-muted">Fast checkout and invoice generation</p>
+            </div>
           </div>
-          <div
-            className="d-flex gap-3 justify-content-start w-100"
-            style={{
-              flexWrap: isMobile ? "nowrap" : "wrap",
-              overflowX: isMobile ? "auto" : "visible",
-              paddingBottom: isMobile ? "0.5rem" : 0,
+          <button
+            type="button"
+            className="btn btn-primary shadow-sm"
+            onClick={() => {
+              setModalMode(selectedCustomer ? "select" : "create");
+              setModalSearch("");
+              setShowCustomerModal(true);
             }}
+            style={{ borderRadius: '10px' }}
           >
-            {billingStats.map((stat, index) => (
+            <i className="bi bi-person-plus-fill me-2"></i>
+            {selectedCustomer ? 'Change Customer' : 'Select Customer'}
+          </button>
+        </div>
+        
+        {/* Stats Row */}
+        <div className="row g-3">
+          {billingStats.map((stat, index) => (
+            <div key={stat.label} className="col-6 col-md-3">
               <div
-                key={stat.label}
-                className="stat-chip surface-chip animate-slide-up flex-shrink-0"
+                className="card border-0 shadow-sm h-100 animate-slide-up"
                 style={{
-                  animationDelay: `${index * 70}ms`,
-                  minWidth: isMobile ? 140 : undefined,
+                  animationDelay: `${index * 50}ms`,
+                  borderRadius: '12px',
+                  background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
                 }}
               >
-                <span className="chip-label">{stat.label}</span>
-                <span className={`chip-value ${stat.accent}`}>{stat.value}</span>
+                <div className="card-body p-3">
+                  <div className="small text-muted mb-1" style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    {stat.label}
+                  </div>
+                  <div className={`fw-bold ${stat.accent}`} style={{ fontSize: '1.5rem' }}>
+                    {stat.value}
+                  </div>
+                </div>
               </div>
-            ))}
-            <button
-              type="button"
-              className="btn btn-light btn-lg shadow-sm animate-slide-up"
-              style={{ animationDelay: `${billingStats.length * 70}ms` }}
-              onClick={() => {
-                setModalMode(selectedCustomer ? "select" : "create");
-                setModalSearch("");
-                setShowCustomerModal(true);
-              }}
-            >
-              <i className="bi bi-person-plus-fill me-2"></i>
-              Manage Customer
-            </button>
-          </div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -607,228 +702,523 @@ const Billing: React.FC = () => {
             </div>
           </div>
 
-          {/* Customer */}
-          {/* <div
-            className="card shadow-sm themed-card animate-slide-up"
-            style={{ animationDelay: "240ms" }}
+          {/* Selected Customer */}
+          <div
+            className="card shadow-sm themed-card animate-slide-up border-0"
+            style={{ 
+              animationDelay: "240ms",
+              background: selectedCustomer ? 'linear-gradient(135deg, #f0f9ff 0%, #ffffff 100%)' : '#ffffff',
+              border: selectedCustomer ? '2px solid #0d6efd' : '1px solid rgba(0,0,0,0.08)',
+            }}
           >
-            <div className="card-header fw-bold d-flex justify-content-between align-items-center">
-              <span>Customer</span>
-              <span className="badge bg-light text-dark">{customers.length} saved</span>
+            <div 
+              className="card-header fw-bold d-flex justify-content-between align-items-center border-0 pb-2"
+              style={{ 
+                background: selectedCustomer ? 'linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%)' : 'transparent',
+                color: selectedCustomer ? '#ffffff' : '#212529',
+                borderRadius: '8px 8px 0 0',
+              }}
+            >
+              <span className="d-flex align-items-center gap-2">
+                <i className={`bi ${selectedCustomer ? 'bi-person-check-fill' : 'bi-person'} ${selectedCustomer ? '' : 'text-primary'}`} style={{ fontSize: '1.2rem' }}></i>
+                Selected Customer
+              </span>
+              {selectedCustomer && (
+                <span className="badge bg-light text-primary" style={{ fontSize: '0.75rem', padding: '4px 8px' }}>
+                  <i className="bi bi-check-circle-fill me-1"></i>
+                  Active
+                </span>
+              )}
             </div>
-            <div className="card-body d-flex flex-column gap-2">
+            <div className="card-body d-flex flex-column gap-3 p-4">
               {selectedCustomer ? (
                 <>
-                  <div className="info-tile">
-                    <span className="info-label">Name</span>
-                    <span className="info-value">{selectedCustomer.name}</span>
+                  {/* Customer Avatar and Name */}
+                  <div className="d-flex align-items-center gap-3 mb-2">
+                    <div 
+                      className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
+                      style={{ 
+                        width: '60px', 
+                        height: '60px', 
+                        background: 'linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%)',
+                        fontSize: '1.5rem',
+                        boxShadow: '0 4px 12px rgba(13, 110, 253, 0.3)',
+                      }}
+                    >
+                      {selectedCustomer.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-grow-1">
+                      <h5 className="mb-0 fw-bold text-primary">{selectedCustomer.name}</h5>
+                      <p className="mb-0 small text-muted">Customer Information</p>
+                    </div>
                   </div>
-                  {selectedCustomer.email && (
-                    <div className="info-tile">
-                      <span className="info-label">Email</span>
-                      <span className="info-value">{selectedCustomer.email}</span>
-                    </div>
-                  )}
-                  {selectedCustomer.phone && (
-                    <div className="info-tile">
-                      <span className="info-label">Phone</span>
-                      <span className="info-value">{selectedCustomer.phone}</span>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="empty-state text-center py-3">
-                  <i className="bi bi-person-circle fs-2 mb-2 d-block text-muted"></i>
-                  <p className="text-muted mb-0">No customer selected</p>
-                </div>
-              )}
-              <button
-                type="button"
-                className="btn btn-outline-primary w-100"
-                onClick={() => {
-                  setModalMode("select");
-                  setModalSearch("");
-                  setShowCustomerModal(true);
-                }}
-              >
-                Choose or Add Customer
-              </button>
-            </div>
-          </div> */}
-        </div>
-      </div>
 
-      <div className={`modal fade ${showCustomerModal ? "show d-block" : ""}`} tabIndex={-1} role="dialog">
-        <div className="modal-dialog modal-dialog-centered modal-lg" role="document">
-          <div className="modal-content shadow-lg border-0">
-            <div className="modal-header bg-primary text-white">
-              <h5 className="modal-title d-flex align-items-center gap-2">
-                <i className="bi bi-people"></i>
-                {modalMode === "select" ? "Select Customer" : "Create Customer"}
-              </h5>
-              <button
-                type="button"
-                className="btn-close btn-close-white"
-                onClick={() => {
-                  setShowCustomerModal(false);
-                  setCustomerErrors({});
-                }}
-              ></button>
-            </div>
-            <div className="modal-body">
-              <div className="btn-group mb-4" role="group">
-                <button
-                  type="button"
-                  className={`btn ${modalMode === "select" ? "btn-primary" : "btn-outline-primary"}`}
-                  onClick={() => setModalMode("select")}
-                >
-                  Existing Customer
-                </button>
-                <button
-                  type="button"
-                  className={`btn ${modalMode === "create" ? "btn-primary" : "btn-outline-primary"}`}
-                  onClick={() => setModalMode("create")}
-                >
-                  New Customer
-                </button>
-              </div>
-
-              {modalMode === "select" ? (
-                <div className="select-customer-pane">
-                  <input
-                    className="form-control glow-control mb-3"
-                    placeholder="Search by name, email, or phone"
-                    value={modalSearch}
-                    onChange={(e) => setModalSearch(e.target.value)}
-                  />
-                  <div className="scroll-shadow" style={{ maxHeight: "320px" }}>
-                    {filteredModalCustomers.length === 0 ? (
-                      <div className="empty-state text-center py-4">
-                        <i className="bi bi-search fs-2 mb-2 d-block text-muted"></i>
-                        <p className="text-muted mb-0">No customers matched your search.</p>
+                  {/* Contact Information */}
+                  <div className="d-flex flex-column gap-2">
+                    {selectedCustomer.email && (
+                      <div className="d-flex align-items-center gap-2 p-2 rounded" style={{ backgroundColor: '#f8f9fa' }}>
+                        <i className="bi bi-envelope-fill text-primary" style={{ fontSize: '1.1rem', width: '24px' }}></i>
+                        <div className="flex-grow-1">
+                          <div className="small text-muted mb-0" style={{ fontSize: '0.7rem' }}>Email</div>
+                          <div className="fw-semibold small">{selectedCustomer.email}</div>
+                        </div>
                       </div>
-                    ) : (
-                      filteredModalCustomers.map((customer) => (
-                        <button
-                          key={customer.id}
-                          type="button"
-                          className="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
-                          onClick={() => {
-                            setSelectedCustomer(customer);
-                            setShowCustomerModal(false);
-                          }}
-                        >
-                          <div>
-                            <div className="fw-semibold">{customer.name}</div>
-                            <div className="small text-muted">
-                              {[customer.email, customer.phone].filter(Boolean).join(" · ") || "—"}
-                            </div>
-                          </div>
-                          <i className="bi bi-check-circle text-primary"></i>
-                        </button>
-                      ))
+                    )}
+                    {selectedCustomer.phone && (
+                      <div className="d-flex align-items-center gap-2 p-2 rounded" style={{ backgroundColor: '#f8f9fa' }}>
+                        <i className="bi bi-telephone-fill text-primary" style={{ fontSize: '1.1rem', width: '24px' }}></i>
+                        <div className="flex-grow-1">
+                          <div className="small text-muted mb-0" style={{ fontSize: '0.7rem' }}>Phone</div>
+                          <div className="fw-semibold small">{selectedCustomer.phone}</div>
+                        </div>
+                      </div>
                     )}
                   </div>
-                </div>
+
+                  {/* Action Buttons */}
+                  <div className="d-flex gap-2 mt-2">
+                    <button
+                      type="button"
+                      className="btn btn-outline-primary btn-sm flex-fill"
+                      onClick={() => {
+                        setModalMode("select");
+                        setModalSearch("");
+                        setShowCustomerModal(true);
+                      }}
+                    >
+                      <i className="bi bi-pencil me-2"></i>
+                      Change
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-outline-danger btn-sm"
+                      onClick={() => {
+                        setSelectedCustomer(null);
+                        toast.info('Customer selection cleared');
+                      }}
+                      style={{ minWidth: '100px' }}
+                    >
+                      <i className="bi bi-x-circle me-1"></i>
+                      Clear
+                    </button>
+                  </div>
+                </>
               ) : (
-                <div className="create-customer-pane">
-                  <div className="mb-3">
-                    <label className="form-label">Full Name</label>
-                    <input
-                      className={`form-control glow-control${customerErrors.name ? " is-invalid" : ""}`}
-                      name="name"
-                      value={customerForm.name}
-                      onChange={(e) => setCustomerForm((prev) => ({ ...prev, name: e.target.value }))}
-                      placeholder="Enter customer name"
-                    />
-                    {customerErrors.name && <div className="invalid-feedback d-block">{customerErrors.name}</div>}
+                <div className="empty-state text-center py-4">
+                  <div 
+                    className="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                    style={{ width: '80px', height: '80px' }}
+                  >
+                    <i className="bi bi-person-circle text-primary" style={{ fontSize: '3rem' }}></i>
                   </div>
-                  <div className="mb-3">
-                    <label className="form-label">Email</label>
-                    <input
-                      className={`form-control glow-control${customerErrors.email ? " is-invalid" : ""}`}
-                      name="email"
-                      type="email"
-                      value={customerForm.email}
-                      onChange={(e) => setCustomerForm((prev) => ({ ...prev, email: e.target.value }))}
-                      placeholder="name@example.com"
-                    />
-                    {customerErrors.email && <div className="invalid-feedback d-block">{customerErrors.email}</div>}
-                  </div>
-                  <div className="mb-3">
-                    <label className="form-label">Phone</label>
-                    <input
-                      className={`form-control glow-control${customerErrors.phone ? " is-invalid" : ""}`}
-                      name="phone"
-                      value={customerForm.phone}
-                      onChange={(e) => setCustomerForm((prev) => ({ ...prev, phone: e.target.value }))}
-                      placeholder="Optional phone number"
-                    />
-                    {customerErrors.phone && <div className="invalid-feedback d-block">{customerErrors.phone}</div>}
-                  </div>
+                  <h6 className="fw-semibold mb-2">No Customer Selected</h6>
+                  <p className="text-muted mb-3 small">Select a customer to associate with this invoice</p>
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    onClick={() => {
+                      setModalMode("select");
+                      setModalSearch("");
+                      setShowCustomerModal(true);
+                    }}
+                    style={{ borderRadius: '8px' }}
+                  >
+                    <i className="bi bi-person-plus me-2"></i>
+                    Select Customer
+                  </button>
                 </div>
-              )}
-            </div>
-            <div className="modal-footer">
-              <button
-                type="button"
-                className="btn btn-outline-secondary"
-                onClick={() => {
-                  setShowCustomerModal(false);
-                  setCustomerErrors({});
-                }}
-              >
-                Close
-              </button>
-              {modalMode === "create" ? (
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={() => {
-                    const trimmedName = customerForm.name.trim();
-                    const trimmedEmail = customerForm.email.trim();
-                    const trimmedPhone = customerForm.phone.trim();
-                    const errs: { [key: string]: string } = {};
-                    if (!trimmedName) errs.name = "Customer name is required";
-                    if (trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
-                      errs.email = "Enter a valid email";
-                    }
-                    if (trimmedPhone && trimmedPhone.length < 6) {
-                      errs.phone = "Enter a valid phone number";
-                    }
-                    setCustomerErrors(errs);
-                    if (Object.keys(errs).length > 0) return;
-                    setPendingCustomerKey(`${trimmedName.toLowerCase()}||${trimmedEmail.toLowerCase()}||${trimmedPhone}`);
-                    dispatch(
-                      addCustomer({
-                        name: trimmedName,
-                        email: trimmedEmail || undefined,
-                        phone: trimmedPhone || undefined,
-                      })
-                    );
-                    setCustomerForm({ name: "", email: "", phone: "" });
-                    setCustomerErrors({});
-                    setModalMode("select");
-                    setModalSearch("");
-                  }}
-                >
-                  Save Customer
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  disabled={!selectedCustomer}
-                  onClick={() => setShowCustomerModal(false)}
-                >
-                  Use Selected Customer
-                </button>
               )}
             </div>
           </div>
+
+          {/* Recently Created Customers */}
+          {recentlyCreatedCustomers.length > 0 && (
+            <div
+              className="card shadow-sm themed-card animate-slide-up"
+              style={{ animationDelay: "300ms" }}
+            >
+              <div className="card-header fw-bold d-flex justify-content-between align-items-center">
+                <span>
+                  <i className="bi bi-clock-history me-2"></i>
+                  Recently Created
+                </span>
+                <span className="badge bg-info">{recentlyCreatedCustomers.length}</span>
+              </div>
+              <div className="card-body">
+                <div className="list-group list-group-flush">
+                  {recentlyCreatedCustomers.map((customer, index) => (
+                    <div
+                      key={customer.id}
+                      className="list-group-item px-0 py-2 border-bottom"
+                      style={{
+                        animationDelay: `${index * 50}ms`,
+                        cursor: 'pointer',
+                        transition: 'background-color 0.2s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#f8f9fa';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }}
+                      onClick={() => {
+                        setSelectedCustomer(customer);
+                        toast.success(`Customer "${customer.name}" selected`);
+                      }}
+                    >
+                      <div className="d-flex justify-content-between align-items-center">
+                        <div>
+                          <div className="fw-semibold small">
+                            {customer.name}
+                            {selectedCustomer?.id === customer.id && (
+                              <span className="badge bg-success ms-2">Selected</span>
+                            )}
+                          </div>
+                          <div className="text-muted" style={{ fontSize: '0.75rem' }}>
+                            {customer.phone && <span><i className="bi bi-telephone me-1"></i>{customer.phone}</span>}
+                            {customer.email && (
+                              <span className={customer.phone ? ' ms-2' : ''}>
+                                <i className="bi bi-envelope me-1"></i>{customer.email}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          className="btn btn-sm btn-outline-primary"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedCustomer(customer);
+                            toast.success(`Customer "${customer.name}" selected`);
+                          }}
+                        >
+                          <i className="bi bi-check-circle"></i>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
-      {showCustomerModal && <div className="modal-backdrop fade show"></div>}
+
+      <Modal 
+        show={showCustomerModal} 
+        onHide={() => {
+          setShowCustomerModal(false);
+          setCustomerErrors({});
+        }} 
+        centered 
+        size="lg"
+        className="customer-modal"
+      >
+        <Modal.Header closeButton className="bg-primary text-white">
+          <Modal.Title className="d-flex align-items-center gap-2">
+            <i className="bi bi-person-plus-fill"></i>
+            {modalMode === "select" ? "Select Customer" : "Create New Customer"}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="p-4">
+          {/* Mode Toggle Buttons */}
+          <div className="d-flex gap-2 mb-4" role="group">
+            <button
+              type="button"
+              className={`btn flex-fill ${modalMode === "select" ? "btn-primary" : "btn-outline-primary"}`}
+              onClick={() => setModalMode("select")}
+              style={{
+                transition: 'all 0.3s ease',
+                borderRadius: '8px',
+                fontWeight: modalMode === "select" ? '600' : '400',
+              }}
+            >
+              <i className={`bi ${modalMode === "select" ? "bi-check-circle-fill" : "bi-people"} me-2`}></i>
+              Existing Customer
+            </button>
+            <button
+              type="button"
+              className={`btn flex-fill ${modalMode === "create" ? "btn-primary" : "btn-outline-primary"}`}
+              onClick={() => setModalMode("create")}
+              style={{
+                transition: 'all 0.3s ease',
+                borderRadius: '8px',
+                fontWeight: modalMode === "create" ? '600' : '400',
+              }}
+            >
+              <i className={`bi ${modalMode === "create" ? "bi-check-circle-fill" : "bi-person-plus"} me-2`}></i>
+              New Customer
+            </button>
+          </div>
+
+          {/* Select Customer Pane */}
+          <div 
+            className={`select-customer-pane ${modalMode === "select" ? "active" : ""}`}
+            style={{
+              display: modalMode === "select" ? "block" : "none",
+              animation: modalMode === "select" ? "slideInRight 0.4s ease-out" : "none",
+            }}
+          >
+            <div className="position-relative mb-3">
+              <i className="bi bi-search position-absolute" style={{ left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#6c757d', zIndex: 10 }}></i>
+              <input
+                className="form-control glow-control ps-5"
+                placeholder="Search by name, email, or phone"
+                value={modalSearch}
+                onChange={(e) => setModalSearch(e.target.value)}
+                style={{ borderRadius: '8px' }}
+              />
+            </div>
+            <div className="scroll-shadow" style={{ maxHeight: "350px", borderRadius: '8px' }}>
+              {loadingCustomers ? (
+                <div className="empty-state text-center py-5">
+                  <div className="spinner-border text-primary mb-3" role="status">
+                    <span className="visually-hidden">Loading...</span>
+                  </div>
+                  <p className="text-muted mb-0 small">Loading customers...</p>
+                </div>
+              ) : filteredModalCustomers.length === 0 ? (
+                <div className="empty-state text-center py-5">
+                  <div className="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style={{ width: '80px', height: '80px' }}>
+                    <i className="bi bi-search fs-2 text-muted"></i>
+                  </div>
+                  <h6 className="fw-semibold mb-2">No customers found</h6>
+                  <p className="text-muted mb-0 small">Try a different search term or create a new customer.</p>
+                </div>
+              ) : (
+                <div className="list-group list-group-flush">
+                  {filteredModalCustomers.map((customer, index) => (
+                    <button
+                      key={customer.id}
+                      type="button"
+                      className="list-group-item list-group-item-action d-flex justify-content-between align-items-center border-0 py-3 customer-item"
+                      onClick={() => {
+                        setSelectedCustomer(customer);
+                        setShowCustomerModal(false);
+                        toast.success(`Customer "${customer.name}" selected`);
+                      }}
+                      style={{
+                        animation: `fadeInUp 0.3s ease-out ${index * 0.05}s both`,
+                        borderRadius: '8px',
+                        marginBottom: '4px',
+                        transition: 'all 0.2s ease',
+                        cursor: 'pointer',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#f8f9fa';
+                        e.currentTarget.style.transform = 'translateX(4px)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = '';
+                        e.currentTarget.style.transform = 'translateX(0)';
+                      }}
+                    >
+                      <div className="d-flex align-items-center gap-3">
+                        <div className="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style={{ width: '45px', height: '45px', minWidth: '45px' }}>
+                          <i className="bi bi-person-fill text-primary"></i>
+                        </div>
+                        <div>
+                          <div className="fw-semibold">{customer.name}</div>
+                          <div className="small text-muted">
+                            {[customer.email, customer.phone].filter(Boolean).join(" · ") || "No contact info"}
+                          </div>
+                        </div>
+                      </div>
+                      <i className="bi bi-chevron-right text-primary"></i>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Create Customer Pane */}
+          <div 
+            className={`create-customer-pane ${modalMode === "create" ? "active" : ""}`}
+            style={{
+              display: modalMode === "create" ? "block" : "none",
+              animation: modalMode === "create" ? "slideInLeft 0.4s ease-out" : "none",
+            }}
+          >
+            <div className="row g-3">
+              <div className="col-12">
+                <label className="form-label fw-semibold d-flex align-items-center gap-2">
+                  <i className="bi bi-person text-primary"></i>
+                  Full Name <span style={{ color: 'red' }}>*</span>
+                </label>
+                <input
+                  className={`form-control glow-control${customerErrors.name ? " is-invalid" : ""}`}
+                  name="name"
+                  value={customerForm.name}
+                  onChange={(e) => setCustomerForm((prev) => ({ ...prev, name: e.target.value }))}
+                  placeholder="Enter customer full name"
+                  style={{ 
+                    borderRadius: '8px',
+                    animation: 'fadeInUp 0.3s ease-out 0.1s both',
+                  }}
+                />
+                {customerErrors.name && (
+                  <div className="invalid-feedback d-block animate-fade-in" style={{ animation: 'fadeIn 0.3s ease-out' }}>
+                    {customerErrors.name}
+                  </div>
+                )}
+              </div>
+              <div className="col-md-6">
+                <label className="form-label fw-semibold d-flex align-items-center gap-2">
+                  <i className="bi bi-envelope text-primary"></i>
+                  Email Address
+                </label>
+                <input
+                  className={`form-control glow-control${customerErrors.email ? " is-invalid" : ""}`}
+                  name="email"
+                  type="email"
+                  value={customerForm.email}
+                  onChange={(e) => setCustomerForm((prev) => ({ ...prev, email: e.target.value }))}
+                  placeholder="name@example.com"
+                  style={{ 
+                    borderRadius: '8px',
+                    animation: 'fadeInUp 0.3s ease-out 0.2s both',
+                  }}
+                />
+                {customerErrors.email && (
+                  <div className="invalid-feedback d-block animate-fade-in" style={{ animation: 'fadeIn 0.3s ease-out' }}>
+                    {customerErrors.email}
+                  </div>
+                )}
+              </div>
+              <div className="col-md-6">
+                <label className="form-label fw-semibold d-flex align-items-center gap-2">
+                  <i className="bi bi-telephone text-primary"></i>
+                  Phone Number
+                </label>
+                <input
+                  className={`form-control glow-control${customerErrors.phone ? " is-invalid" : ""}`}
+                  name="phone"
+                  value={customerForm.phone}
+                  onChange={(e) => setCustomerForm((prev) => ({ ...prev, phone: e.target.value }))}
+                  placeholder="Optional phone number"
+                  maxLength={15}
+                  style={{ 
+                    borderRadius: '8px',
+                    animation: 'fadeInUp 0.3s ease-out 0.3s both',
+                  }}
+                />
+                {customerErrors.phone && (
+                  <div className="invalid-feedback d-block animate-fade-in" style={{ animation: 'fadeIn 0.3s ease-out' }}>
+                    {customerErrors.phone}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </Modal.Body>
+        <Modal.Footer className="border-top">
+          <Button 
+            variant="secondary" 
+            onClick={() => {
+              setShowCustomerModal(false);
+              setCustomerErrors({});
+            }}
+            style={{ borderRadius: '8px' }}
+          >
+            Cancel
+          </Button>
+          {modalMode === "create" ? (
+            <Button
+              variant="primary"
+              disabled={loadingCustomers}
+              onClick={async () => {
+                const trimmedName = customerForm.name.trim();
+                const trimmedEmail = customerForm.email.trim();
+                const trimmedPhone = customerForm.phone.trim();
+                const errs: { [key: string]: string } = {};
+                if (!trimmedName) errs.name = "Customer name is required";
+                if (trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+                  errs.email = "Enter a valid email";
+                }
+                if (trimmedPhone && trimmedPhone.length < 6) {
+                  errs.phone = "Enter a valid phone number";
+                }
+                setCustomerErrors(errs);
+                if (Object.keys(errs).length > 0) return;
+
+                try {
+                  setLoadingCustomers(true);
+                  const newCustomer = await createCustomer({
+                    name: trimmedName,
+                    email: trimmedEmail || undefined,
+                    phone: trimmedPhone || undefined,
+                  });
+                  
+                  // Update local state and Redux
+                  setApiCustomers([...apiCustomers, newCustomer]);
+                  // Note: addCustomer in slice expects Omit<Customer, 'id'>, but we have full Customer from API
+                  // So we'll use setCustomers to update the full list instead
+                  const updatedCustomers = [...apiCustomers, newCustomer];
+                  dispatch(setCustomers(updatedCustomers));
+                  setSelectedCustomer(newCustomer);
+                  
+                  // Add to recently created customers (keep last 5)
+                  setRecentlyCreatedCustomers(prev => {
+                    const updated = [newCustomer, ...prev.filter(c => c.id !== newCustomer.id)];
+                    return updated.slice(0, 5);
+                  });
+                  
+                  toast.success(`Customer "${newCustomer.name}" created successfully!`);
+                  
+                  setCustomerForm({ name: "", email: "", phone: "" });
+                  setCustomerErrors({});
+                  setModalMode("select");
+                  setModalSearch("");
+                  setShowCustomerModal(false);
+                } catch (error) {
+                  console.error('[Billing] Failed to create customer:', error);
+                  if (error instanceof ApiError) {
+                    if (error.details && typeof error.details === 'object' && 'details' in error.details) {
+                      const validationErrors = (error.details as any).details || [];
+                      const errs: { [key: string]: string } = {};
+                      validationErrors.forEach((err: any) => {
+                        if (err.path) {
+                          errs[err.path] = err.message;
+                        }
+                      });
+                      setCustomerErrors(errs);
+                    } else {
+                      toast.error(`Failed to create customer: ${error.message}`);
+                    }
+                  } else {
+                    toast.error('Failed to create customer. Please try again.');
+                  }
+                } finally {
+                  setLoadingCustomers(false);
+                }
+              }}
+              style={{ borderRadius: '8px' }}
+            >
+              {loadingCustomers ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <i className="bi bi-check-circle me-2"></i>
+                  Save Customer
+                </>
+              )}
+            </Button>
+          ) : (
+            <Button
+              variant="primary"
+              disabled={!selectedCustomer}
+              onClick={() => setShowCustomerModal(false)}
+              style={{ borderRadius: '8px' }}
+            >
+              <i className="bi bi-check-circle me-2"></i>
+              Use Selected Customer
+            </Button>
+          )}
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 };

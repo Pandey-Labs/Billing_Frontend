@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
 import {
   House,
   BoxSeam,
@@ -7,8 +8,11 @@ import {
   Cart4,
   People,
   GraphUp,
-  Gear
+  Gear,
+  BoxArrowRight
 } from 'react-bootstrap-icons';
+import { logout } from '../slices/authSlice';
+import { toast } from '../utils/toast';
 import '../styles.css';
 
 type NavItem = {
@@ -31,6 +35,8 @@ const Sidebar: React.FC<{ onSidebarClassChange?: (c: string) => void }> = ({ onS
   const [collapsed] = useState(true);
   const [hovered, setHovered] = useState(false);
   const isExpanded = !collapsed || hovered;
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   // Sync with context if provided
   useEffect(() => {
@@ -39,6 +45,12 @@ const Sidebar: React.FC<{ onSidebarClassChange?: (c: string) => void }> = ({ onS
     }
   }, [isExpanded, onSidebarClassChange]);
 
+  const handleLogout = () => {
+    dispatch(logout());
+    toast.info('Logged out successfully');
+    navigate('/');
+  };
+
   return (
     <aside
       className={`app-sidebar${isExpanded ? '' : ' collapsed'}`}
@@ -46,26 +58,6 @@ const Sidebar: React.FC<{ onSidebarClassChange?: (c: string) => void }> = ({ onS
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <div className="sidebar-top d-flex align-items-center justify-content-between px-2">
-        <div className="brand d-flex align-items-center gap-2">
-          <div
-            className="brand-icon rounded-circle bg-primary d-flex align-items-center justify-content-center text-white"
-            style={{ width: 36, height: 36 }}
-          >
-            MS
-          </div>
-          {isExpanded && <div className="brand-text fw-bold">MyShop</div>}
-        </div>
-
-        {/* <button
-          className="btn btn-sm btn-outline-secondary sidebar-toggle"
-          onClick={() => setCollapsed((c) => !c)}
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          ☰
-        </button> */}
-      </div>
-
       <nav className="nav flex-column mt-3 px-1" role="navigation">
         {NAV_ITEMS.map(({ to, label, Icon }) => (
           <NavLink
@@ -86,9 +78,35 @@ const Sidebar: React.FC<{ onSidebarClassChange?: (c: string) => void }> = ({ onS
       </nav>
 
       <div className="sidebar-footer mt-auto px-2 pb-3">
-        <div className="small text-muted text-center">
-          {isExpanded ? <>Logged in as <strong>Admin</strong></> : 'A'}
+        <button
+          onClick={handleLogout}
+          className="btn btn-outline-danger w-100 d-flex align-items-center justify-content-center gap-2 py-2"
+          style={{
+            borderRadius: '8px',
+            transition: 'all 0.2s ease',
+            borderColor: '#dc3545',
+            color: '#dc3545',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = '#dc3545';
+            e.currentTarget.style.color = '#fff';
+            e.currentTarget.style.transform = 'translateY(-1px)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+            e.currentTarget.style.color = '#dc3545';
+            e.currentTarget.style.transform = 'translateY(0)';
+          }}
+          title="Logout"
+        >
+          <BoxArrowRight size={18} />
+          {isExpanded && <span>Logout</span>}
+        </button>
+        {isExpanded && (
+          <div className="small text-muted text-center mt-2">
+            Logged in as <strong>Admin</strong>
         </div>
+        )}
       </div>
     </aside>
   );

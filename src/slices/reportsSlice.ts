@@ -15,9 +15,10 @@ const slice = createSlice({
     reducers: {
         addSale(state, action: PayloadAction<Invoice>) { state.sales.push(action.payload); localStorage.setItem('sales', JSON.stringify(state.sales)) },
         loadSales(state) { state.sales = JSON.parse(localStorage.getItem('sales') || '[]') },
+        setSales(state, action: PayloadAction<Invoice[]>) { state.sales = action.payload; localStorage.setItem('sales', JSON.stringify(state.sales)) },
     }
 })
 
 
-export const { addSale, loadSales } = slice.actions
+export const { addSale, loadSales, setSales } = slice.actions
 export default slice.reducer

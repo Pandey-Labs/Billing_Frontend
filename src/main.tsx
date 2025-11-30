@@ -5,6 +5,8 @@ import { Provider } from 'react-redux'
 import store from './store/store'
 import App from './App'
 import 'bootstrap/dist/css/bootstrap.min.css'
+// Uncomment the line below after installing react-toastify: npm install react-toastify
+// import 'react-toastify/dist/ReactToastify.css'
 // import './styles.css'
 
 createRoot(document.getElementById('root')!).render(
