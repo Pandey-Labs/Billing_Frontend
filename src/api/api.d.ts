@@ -112,3 +112,34 @@ export declare function getProductByBarcode(
   barcode: string,
   options?: RequestInit & { token?: string },
 ): Promise<Product | null>;
+
+export declare function downloadBulkTemplate(
+  options?: { token?: string },
+): Promise<Blob>;
+
+export interface BulkUploadResult {
+  message: string;
+  operation: 'create' | 'update' | 'upsert';
+  results: {
+    success?: Array<{ row: number; product: Product }>;
+    created?: Array<{ row: number; product: Product }>;
+    updated?: Array<{ row: number; product: Product }>;
+    notFound?: Array<{ row: number; data: Record<string, unknown> }>;
+    errors: Array<{ row: number; error: string }>;
+  };
+  summary: {
+    total: number;
+    processed: number;
+    validationErrors: number;
+    created?: number;
+    updated?: number;
+    errors: number;
+    notFound?: number;
+  };
+}
+
+export declare function bulkUploadProducts(
+  file: File,
+  operation?: 'create' | 'update' | 'upsert',
+  options?: { token?: string },
+): Promise<BulkUploadResult>;

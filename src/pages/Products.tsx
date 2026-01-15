@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useAppSelector, useAppDispatch } from "../store/hooks";
 import { removeProduct, fetchProducts } from "../slices/productsSlice";
 import { Link } from "react-router-dom";
+import BulkUploadModal from "../components/BulkUploadModal";
 
 const placeholder = "—";
 
@@ -33,6 +34,7 @@ const Products: React.FC = () => {
   const columnsCount = 15;
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
 
   useEffect(() => {
     if (status === "idle") {
@@ -195,6 +197,13 @@ const Products: React.FC = () => {
                 <span className="chip-label">Variants</span>
                 <span className="chip-value">{variantCount}</span>
               </div>
+              <button 
+                className="btn btn-outline-light btn-lg shadow-sm"
+                onClick={() => setShowBulkUploadModal(true)}
+              >
+                <i className="bi bi-cloud-upload me-1"></i>
+                Bulk Upload
+              </button>
               <Link to="/products/new" className="btn btn-light btn-lg shadow-sm">
                 <i className="bi bi-plus-circle me-1"></i>
                 Add Product
@@ -451,6 +460,16 @@ const Products: React.FC = () => {
       </div>
 
       {showDeleteModal && <div className="modal-backdrop fade show"></div>}
+
+      {/* Bulk Upload Modal */}
+      <BulkUploadModal
+        show={showBulkUploadModal}
+        onClose={() => setShowBulkUploadModal(false)}
+        onSuccess={() => {
+          dispatch(fetchProducts());
+          setShowBulkUploadModal(false);
+        }}
+      />
     </div>
   );
 };

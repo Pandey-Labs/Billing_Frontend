@@ -15,7 +15,12 @@ import { setCustomers } from "../slices/customersSlice";
 import { useAppSelector } from "../store/hooks";
 import type { RootState } from "../store/store";
 import type { Customer, Product, Invoice } from "../types";
-import { getCustomers, createCustomer, getProductByBarcode, ApiError } from "../api/api";
+import {
+  getCustomers,
+  createCustomer,
+  getProductByBarcode,
+  ApiError,
+} from "../api/api";
 import ApiErrorFallback from "../components/ApiErrorFallback";
 
 interface RazorpayOptions {
@@ -59,18 +64,29 @@ const Billing: React.FC = () => {
   const cart = useSelector((state: RootState) => state.cart);
   const products = useSelector((state: RootState) => state.products.items);
   const customers = useAppSelector((state: RootState) => state.customers.items);
-  const token = useAppSelector((state: RootState) => state.auth.token) || undefined;
+  const token =
+    useAppSelector((state: RootState) => state.auth.token) || undefined;
   const [search, setSearch] = useState("");
   const [barcodeInput, setBarcodeInput] = useState("");
   const [barcodeLoading, setBarcodeLoading] = useState(false);
   const [barcodeError, setBarcodeError] = useState<string | null>(null);
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
+    null
+  );
   const [showCustomerModal, setShowCustomerModal] = useState(false);
-  const [modalMode, setModalMode] = useState<'select' | 'create'>("select");
+  const [modalMode, setModalMode] = useState<"select" | "create">("select");
   const [modalSearch, setModalSearch] = useState("");
-  const [customerForm, setCustomerForm] = useState({ name: "", phone: "", email: "" });
-  const [customerErrors, setCustomerErrors] = useState<{ [key: string]: string }>({});
-  const [pendingCustomerKey, setPendingCustomerKey] = useState<string | null>(null);
+  const [customerForm, setCustomerForm] = useState({
+    name: "",
+    phone: "",
+    email: "",
+  });
+  const [customerErrors, setCustomerErrors] = useState<{
+    [key: string]: string;
+  }>({});
+  const [pendingCustomerKey, setPendingCustomerKey] = useState<string | null>(
+    null
+  );
   const [isMobile, setIsMobile] = useState<boolean>(() =>
     typeof window !== "undefined" ? window.innerWidth < 992 : false
   );
@@ -79,7 +95,12 @@ const Billing: React.FC = () => {
   const [apiCustomers, setApiCustomers] = useState<Customer[]>([]);
   const [customerApiError, setCustomerApiError] = useState<string | null>(null);
   const [hasCustomerApiError, setHasCustomerApiError] = useState(false);
-  const [recentlyCreatedCustomers, setRecentlyCreatedCustomers] = useState<Customer[]>([]);
+  const [recentlyCreatedCustomers, setRecentlyCreatedCustomers] = useState<
+    Customer[]
+  >([]);
+  const paymentGatewayEnabled = useAppSelector(
+    (state: RootState) => state.settings.paymentGatewayEnabled
+  );
 
   // Fetch customers from API on mount
   const fetchCustomers = async () => {
@@ -88,24 +109,26 @@ const Billing: React.FC = () => {
       setCustomerApiError(null);
       setHasCustomerApiError(false);
       const data = await getCustomers({ token });
-      
+
       // Validate API response
       if (!data || !Array.isArray(data)) {
-        throw new Error('Invalid API response format');
+        throw new Error("Invalid API response format");
       }
-      
+
       setApiCustomers(data || []);
       dispatch(setCustomers(data || []));
       setHasCustomerApiError(false);
     } catch (error) {
-      console.error('[Billing] Failed to fetch customers:', error);
+      console.error("[Billing] Failed to fetch customers:", error);
       setHasCustomerApiError(true);
       if (error instanceof ApiError) {
         setCustomerApiError(`Failed to load customers: ${error.message}`);
       } else if (error instanceof Error) {
         setCustomerApiError(`Failed to load customers: ${error.message}`);
       } else {
-        setCustomerApiError('Failed to load customers. The API response could not be handled.');
+        setCustomerApiError(
+          "Failed to load customers. The API response could not be handled."
+        );
       }
       // Fallback to Redux store if API fails
       setApiCustomers(customers);
@@ -121,14 +144,14 @@ const Billing: React.FC = () => {
   // Search customers from API when modalSearch changes
   useEffect(() => {
     if (!showCustomerModal || modalMode !== "select") return;
-    
+
     const searchCustomers = async () => {
       try {
         setLoadingCustomers(true);
         const data = await getCustomers({ token, search: modalSearch });
         setApiCustomers(data || []);
       } catch (error) {
-        console.error('[Billing] Failed to search customers:', error);
+        console.error("[Billing] Failed to search customers:", error);
         // Fallback to local filtering
         const term = modalSearch.toLowerCase();
         if (!term) {
@@ -168,10 +191,11 @@ const Billing: React.FC = () => {
   useEffect(() => {
     if (!pendingCustomerKey) return;
     const [nameKey, emailKey, phoneKey] = pendingCustomerKey.split("||");
-    const match = apiCustomers.find((c) =>
-      c.name.trim().toLowerCase() === nameKey &&
-      (c.email ? c.email.trim().toLowerCase() : "") === emailKey &&
-      (c.phone ? c.phone.trim() : "") === phoneKey
+    const match = apiCustomers.find(
+      (c) =>
+        c.name.trim().toLowerCase() === nameKey &&
+        (c.email ? c.email.trim().toLowerCase() : "") === emailKey &&
+        (c.phone ? c.phone.trim() : "") === phoneKey
     );
     if (match) {
       setSelectedCustomer(match);
@@ -198,16 +222,17 @@ const Billing: React.FC = () => {
     const discountType =
       prod.discountType ||
       (prod.discountAmount || prod.discountValue
-        ? 'flat'
+        ? "flat"
         : prod.discount || prod.discountPrice
-        ? 'percentage'
+        ? "percentage"
         : undefined);
-    if (discountType === 'flat') {
-      const amount = Number(prod.discountAmount ?? prod.discountValue ?? 0) || 0;
+    if (discountType === "flat") {
+      const amount =
+        Number(prod.discountAmount ?? prod.discountValue ?? 0) || 0;
       return sum + Math.max(amount, 0) * qty;
     }
     const percent = Number(
-      prod.discount ?? prod.discountPrice ?? prod.discountValue ?? 0,
+      prod.discount ?? prod.discountPrice ?? prod.discountValue ?? 0
     );
     const percentageDiscount = ((price * Math.max(percent, 0)) / 100) * qty;
     return sum + percentageDiscount;
@@ -221,14 +246,24 @@ const Billing: React.FC = () => {
     const discountType =
       prod.discountType ||
       (prod.discountAmount || prod.discountValue
-        ? 'flat'
+        ? "flat"
         : prod.discount || prod.discountPrice
-        ? 'percentage'
+        ? "percentage"
         : undefined);
     const discountPerUnit =
-      discountType === 'flat'
-        ? Math.max(Number(prod.discountAmount ?? prod.discountValue ?? 0) || 0, 0)
-        : (price * Math.max(Number(prod.discount ?? prod.discountPrice ?? prod.discountValue ?? 0) || 0, 0)) / 100;
+      discountType === "flat"
+        ? Math.max(
+            Number(prod.discountAmount ?? prod.discountValue ?? 0) || 0,
+            0
+          )
+        : (price *
+            Math.max(
+              Number(
+                prod.discount ?? prod.discountPrice ?? prod.discountValue ?? 0
+              ) || 0,
+              0
+            )) /
+          100;
     const priceAfterDiscount = Math.max(price - discountPerUnit, 0);
     const taxPercent = Number(prod.taxRate || prod.taxPercent) || 0;
     return sum + (taxPercent * priceAfterDiscount * qty) / 100;
@@ -236,7 +271,10 @@ const Billing: React.FC = () => {
 
   const effectiveDiscount = Math.min(discount, subtotal);
   const total = Math.max(subtotal - effectiveDiscount, 0) + tax;
-  const totalItemsInCart = cart.items.reduce((sum, item) => sum + (item.qty || 0), 0);
+  const totalItemsInCart = cart.items.reduce(
+    (sum, item) => sum + (item.qty || 0),
+    0
+  );
   const uniqueItemsInCart = cart.items.length;
   const averageItemValue = totalItemsInCart ? total / totalItemsInCart : 0;
   const billingStats = useMemo(
@@ -266,10 +304,12 @@ const Billing: React.FC = () => {
   );
 
   const addProductToCart = (product: Product) => {
-    const variantInfo = product.parentProductId 
-      ? [product.size, product.color].filter(Boolean).join(', ') 
+    const variantInfo = product.parentProductId
+      ? [product.size, product.color].filter(Boolean).join(", ")
       : null;
-    const displayName = variantInfo ? `${product.name} (${variantInfo})` : product.name;
+    const displayName = variantInfo
+      ? `${product.name} (${variantInfo})`
+      : product.name;
     dispatch(
       addToCart({
         productId: product.id,
@@ -300,7 +340,7 @@ const Billing: React.FC = () => {
         toast.error("No product found with this barcode");
       }
     } catch (error) {
-      console.error('[Billing] Barcode search error:', error);
+      console.error("[Billing] Barcode search error:", error);
       if (error instanceof ApiError) {
         setBarcodeError(error.message);
         toast.error(error.message);
@@ -326,7 +366,11 @@ const Billing: React.FC = () => {
 
   const loadRazorpayScript = () =>
     new Promise<boolean>((resolve) => {
-      if (document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]')) {
+      if (
+        document.querySelector(
+          'script[src="https://checkout.razorpay.com/v1/checkout.js"]'
+        )
+      ) {
         resolve(true);
         return;
       }
@@ -356,13 +400,39 @@ const Billing: React.FC = () => {
 
     dispatch(addSale(invoice));
     printInvoice(invoice);
-    dispatch(deductStock(cart.items.map((i) => ({ productId: i.productId, qty: i.qty }))));
+    dispatch(
+      deductStock(
+        cart.items.map((i) => ({ productId: i.productId, qty: i.qty }))
+      )
+    );
     dispatch(clearCart());
     nav(`/invoice/${invoiceId}`);
   };
 
   const handleCheckout = async () => {
     if (cart.items.length === 0 || processingPayment) return;
+
+    // Get settings from Redux
+
+    const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID;
+
+    // Check if payment gateway is disabled in settings
+    if (!paymentGatewayEnabled) {
+      console.log(
+        "Payment gateway disabled in settings. Creating invoice directly."
+      );
+      toast.info("Creating invoice (payment gateway disabled in settings)");
+      finalizeCheckout();
+      return;
+    }
+
+    // If no Razorpay key, proceed with direct checkout
+    if (!razorpayKey) {
+      console.warn("Razorpay not configured. Proceeding with direct checkout.");
+      toast.info("Payment gateway not configured. Processing order directly.");
+      finalizeCheckout();
+      return;
+    }
 
     if (total <= 0) {
       finalizeCheckout();
@@ -378,32 +448,29 @@ const Billing: React.FC = () => {
       return;
     }
 
-    const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID;
-    if (!razorpayKey) {
-      toast.error("Razorpay key not configured. Set VITE_RAZORPAY_KEY_ID in your environment.");
-      setProcessingPayment(false);
-      return;
-    }
-
     const amountInPaise = Math.round(total * 100);
 
     let orderId: string | undefined;
     try {
-      const { default: axios } = await import('axios');
-      const { data } = await axios.post('/api/payments/create-order', {
-        amount: amountInPaise,
-        currency: 'INR',
-        receipt: `receipt_${Date.now()}`,
-        notes: {
-          customer: selectedCustomer?.id ?? 'guest',
-          items: cart.items.length,
+      const { default: axios } = await import("axios");
+      const { data } = await axios.post(
+        "/api/payments/create-order",
+        {
+          amount: amountInPaise,
+          currency: "INR",
+          receipt: `receipt_${Date.now()}`,
+          notes: {
+            customer: selectedCustomer?.id ?? "guest",
+            items: cart.items.length,
+          },
         },
-      }, {
-        headers: { 'Content-Type': 'application/json' },
-      });
+        {
+          headers: { "Content-Type": "application/json" },
+        }
+      );
       orderId = data?.id || data?.orderId;
     } catch (error) {
-      console.warn('Unable to create Razorpay order from API.', error);
+      console.warn("Unable to create Razorpay order from API.", error);
     }
 
     const paymentOptions = {
@@ -451,33 +518,55 @@ const Billing: React.FC = () => {
   };
 
   const printInvoice = (invoice: Invoice) => {
-    const win = window.open('', 'PRINT', 'height=600,width=800');
+    const win = window.open("", "PRINT", "height=600,width=800");
     if (!win) return;
-    win.document.write('<html><head><title>Invoice #' + invoice.id + '</title>');
-    win.document.write('</head><body>');
-    win.document.write('<h2>Invoice #' + invoice.id + '</h2>');
-    win.document.write('<div>Date: ' + (invoice.date ? new Date(invoice.date).toLocaleString() : '') + '</div>');
+    win.document.write(
+      "<html><head><title>Invoice #" + invoice.id + "</title>"
+    );
+    win.document.write("</head><body>");
+    win.document.write("<h2>Invoice #" + invoice.id + "</h2>");
+    win.document.write(
+      "<div>Date: " +
+        (invoice.date ? new Date(invoice.date).toLocaleString() : "") +
+        "</div>"
+    );
     if (invoice.customer) {
-      win.document.write('<div>Customer: ' + invoice.customer.name + (invoice.customer.phone ? ' (' + invoice.customer.phone + ')' : '') + (invoice.customer.email ? ' (' + invoice.customer.email + ')' : '') + '</div>');
+      win.document.write(
+        "<div>Customer: " +
+          invoice.customer.name +
+          (invoice.customer.phone ? " (" + invoice.customer.phone + ")" : "") +
+          (invoice.customer.email ? " (" + invoice.customer.email + ")" : "") +
+          "</div>"
+      );
     }
-    win.document.write('<hr/>');
-    win.document.write('<table border="1" cellpadding="5" cellspacing="0" style="width:100%;border-collapse:collapse;">');
-    win.document.write('<thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Subtotal</th></tr></thead><tbody>');
+    win.document.write("<hr/>");
+    win.document.write(
+      '<table border="1" cellpadding="5" cellspacing="0" style="width:100%;border-collapse:collapse;">'
+    );
+    win.document.write(
+      "<thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Subtotal</th></tr></thead><tbody>"
+    );
     invoice.items.forEach((item) => {
-      win.document.write('<tr>');
-      win.document.write('<td>' + item.name + '</td>');
-      win.document.write('<td>' + item.qty + '</td>');
-      win.document.write('<td>' + item.price + '</td>');
-      win.document.write('<td>' + (item.price * item.qty).toFixed(2) + '</td>');
-      win.document.write('</tr>');
+      win.document.write("<tr>");
+      win.document.write("<td>" + item.name + "</td>");
+      win.document.write("<td>" + item.qty + "</td>");
+      win.document.write("<td>" + item.price + "</td>");
+      win.document.write("<td>" + (item.price * item.qty).toFixed(2) + "</td>");
+      win.document.write("</tr>");
     });
-    win.document.write('</tbody></table>');
-    win.document.write('<hr/>');
-    win.document.write('<div>Subtotal: ₹' + invoice.subtotal.toFixed(2) + '</div>');
-    win.document.write('<div>Discount: -₹' + invoice.discount.toFixed(2) + '</div>');
-    win.document.write('<div>Tax: ₹' + invoice.tax.toFixed(2) + '</div>');
-    win.document.write('<div><b>Total: ₹' + invoice.total.toFixed(2) + '</b></div>');
-    win.document.write('</body></html>');
+    win.document.write("</tbody></table>");
+    win.document.write("<hr/>");
+    win.document.write(
+      "<div>Subtotal: ₹" + invoice.subtotal.toFixed(2) + "</div>"
+    );
+    win.document.write(
+      "<div>Discount: -₹" + invoice.discount.toFixed(2) + "</div>"
+    );
+    win.document.write("<div>Tax: ₹" + invoice.tax.toFixed(2) + "</div>");
+    win.document.write(
+      "<div><b>Total: ₹" + invoice.total.toFixed(2) + "</b></div>"
+    );
+    win.document.write("</body></html>");
     win.document.close();
     win.focus();
     win.print();
@@ -485,10 +574,15 @@ const Billing: React.FC = () => {
   };
 
   // Show error fallback if customer API failed and no customers available
-  if (hasCustomerApiError && customerApiError && apiCustomers.length === 0 && customers.length === 0) {
+  if (
+    hasCustomerApiError &&
+    customerApiError &&
+    apiCustomers.length === 0 &&
+    customers.length === 0
+  ) {
     return (
       <div className="billing-page themed-page py-4 px-3">
-        <ApiErrorFallback 
+        <ApiErrorFallback
           error={customerApiError}
           onRetry={fetchCustomers}
           title="Unable to Load Customers"
@@ -504,15 +598,20 @@ const Billing: React.FC = () => {
       <div className="mb-4">
         <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-3">
           <div className="d-flex align-items-center gap-3">
-            <div 
+            <div
               className="bg-primary bg-opacity-10 rounded-3 d-flex align-items-center justify-content-center"
-              style={{ width: '50px', height: '50px' }}
+              style={{ width: "50px", height: "50px" }}
             >
-              <i className="bi bi-cart-check text-primary" style={{ fontSize: '1.5rem' }}></i>
+              <i
+                className="bi bi-cart-check text-primary"
+                style={{ fontSize: "1.5rem" }}
+              ></i>
             </div>
             <div>
               <h4 className="mb-0 fw-bold text-dark">Quick Billing</h4>
-              <p className="mb-0 small text-muted">Fast checkout and invoice generation</p>
+              <p className="mb-0 small text-muted">
+                Fast checkout and invoice generation
+              </p>
             </div>
           </div>
           <button
@@ -523,13 +622,13 @@ const Billing: React.FC = () => {
               setModalSearch("");
               setShowCustomerModal(true);
             }}
-            style={{ borderRadius: '10px' }}
+            style={{ borderRadius: "10px" }}
           >
             <i className="bi bi-person-plus-fill me-2"></i>
-            {selectedCustomer ? 'Change Customer' : 'Select Customer'}
+            {selectedCustomer ? "Change Customer" : "Select Customer"}
           </button>
         </div>
-        
+
         {/* Stats Row */}
         <div className="row g-3">
           {billingStats.map((stat, index) => (
@@ -538,15 +637,27 @@ const Billing: React.FC = () => {
                 className="card border-0 shadow-sm h-100 animate-slide-up"
                 style={{
                   animationDelay: `${index * 50}ms`,
-                  borderRadius: '12px',
-                  background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+                  borderRadius: "12px",
+                  background:
+                    "linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)",
                 }}
               >
                 <div className="card-body p-3">
-                  <div className="small text-muted mb-1" style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  <div
+                    className="small text-muted mb-1"
+                    style={{
+                      fontSize: "0.75rem",
+                      fontWeight: 600,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.5px",
+                    }}
+                  >
                     {stat.label}
                   </div>
-                  <div className={`fw-bold ${stat.accent}`} style={{ fontSize: '1.5rem' }}>
+                  <div
+                    className={`fw-bold ${stat.accent}`}
+                    style={{ fontSize: "1.5rem" }}
+                  >
                     {stat.value}
                   </div>
                 </div>
@@ -577,7 +688,9 @@ const Billing: React.FC = () => {
                     <i className="bi bi-upc-scan"></i>
                   </span>
                   <input
-                    className={`form-control glow-control ${barcodeError ? 'is-invalid' : ''}`}
+                    className={`form-control glow-control ${
+                      barcodeError ? "is-invalid" : ""
+                    }`}
                     placeholder="Scan or enter barcode..."
                     value={barcodeInput}
                     onChange={(e) => {
@@ -593,7 +706,11 @@ const Billing: React.FC = () => {
                     disabled={barcodeLoading || !barcodeInput.trim()}
                   >
                     {barcodeLoading ? (
-                      <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                      <span
+                        className="spinner-border spinner-border-sm"
+                        role="status"
+                        aria-hidden="true"
+                      ></span>
                     ) : (
                       <i className="bi bi-search"></i>
                     )}
@@ -628,7 +745,9 @@ const Billing: React.FC = () => {
                     const variantInfo = p.parentProductId
                       ? [p.size, p.color].filter(Boolean).join(", ")
                       : null;
-                    const displayName = variantInfo ? `${p.name} (${variantInfo})` : p.name;
+                    const displayName = variantInfo
+                      ? `${p.name} (${variantInfo})`
+                      : p.name;
                     return (
                       <div
                         key={p.id}
@@ -638,7 +757,8 @@ const Billing: React.FC = () => {
                         <div>
                           <div className="fw-semibold">{displayName}</div>
                           <div className="small text-muted">
-                            {p.sku} | Stock: {p.stock} | ₹{p.sellingPrice || p.price}
+                            {p.sku} | Stock: {p.stock} | ₹
+                            {p.sellingPrice || p.price}
                           </div>
                         </div>
                         <button
@@ -753,7 +873,11 @@ const Billing: React.FC = () => {
                 >
                   {processingPayment ? (
                     <span className="d-inline-flex align-items-center gap-2">
-                      <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                      <span
+                        className="spinner-border spinner-border-sm"
+                        role="status"
+                        aria-hidden="true"
+                      ></span>
                       Processing...
                     </span>
                   ) : (
@@ -773,26 +897,40 @@ const Billing: React.FC = () => {
           {/* Selected Customer */}
           <div
             className="card shadow-sm themed-card animate-slide-up border-0"
-            style={{ 
+            style={{
               animationDelay: "240ms",
-              background: selectedCustomer ? 'linear-gradient(135deg, #f0f9ff 0%, #ffffff 100%)' : '#ffffff',
-              border: selectedCustomer ? '2px solid #0d6efd' : '1px solid rgba(0,0,0,0.08)',
+              background: selectedCustomer
+                ? "linear-gradient(135deg, #f0f9ff 0%, #ffffff 100%)"
+                : "#ffffff",
+              border: selectedCustomer
+                ? "2px solid #0d6efd"
+                : "1px solid rgba(0,0,0,0.08)",
             }}
           >
-            <div 
+            <div
               className="card-header fw-bold d-flex justify-content-between align-items-center border-0 pb-2"
-              style={{ 
-                background: selectedCustomer ? 'linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%)' : 'transparent',
-                color: selectedCustomer ? '#ffffff' : '#212529',
-                borderRadius: '8px 8px 0 0',
+              style={{
+                background: selectedCustomer
+                  ? "linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%)"
+                  : "transparent",
+                color: selectedCustomer ? "#ffffff" : "#212529",
+                borderRadius: "8px 8px 0 0",
               }}
             >
               <span className="d-flex align-items-center gap-2">
-                <i className={`bi ${selectedCustomer ? 'bi-person-check-fill' : 'bi-person'} ${selectedCustomer ? '' : 'text-primary'}`} style={{ fontSize: '1.2rem' }}></i>
+                <i
+                  className={`bi ${
+                    selectedCustomer ? "bi-person-check-fill" : "bi-person"
+                  } ${selectedCustomer ? "" : "text-primary"}`}
+                  style={{ fontSize: "1.2rem" }}
+                ></i>
                 Selected Customer
               </span>
               {selectedCustomer && (
-                <span className="badge bg-light text-primary" style={{ fontSize: '0.75rem', padding: '4px 8px' }}>
+                <span
+                  className="badge bg-light text-primary"
+                  style={{ fontSize: "0.75rem", padding: "4px 8px" }}
+                >
                   <i className="bi bi-check-circle-fill me-1"></i>
                   Active
                 </span>
@@ -803,41 +941,72 @@ const Billing: React.FC = () => {
                 <>
                   {/* Customer Avatar and Name */}
                   <div className="d-flex align-items-center gap-3 mb-2">
-                    <div 
+                    <div
                       className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
-                      style={{ 
-                        width: '60px', 
-                        height: '60px', 
-                        background: 'linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%)',
-                        fontSize: '1.5rem',
-                        boxShadow: '0 4px 12px rgba(13, 110, 253, 0.3)',
+                      style={{
+                        width: "60px",
+                        height: "60px",
+                        background:
+                          "linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%)",
+                        fontSize: "1.5rem",
+                        boxShadow: "0 4px 12px rgba(13, 110, 253, 0.3)",
                       }}
                     >
                       {selectedCustomer.name.charAt(0).toUpperCase()}
                     </div>
                     <div className="flex-grow-1">
-                      <h5 className="mb-0 fw-bold text-primary">{selectedCustomer.name}</h5>
-                      <p className="mb-0 small text-muted">Customer Information</p>
+                      <h5 className="mb-0 fw-bold text-primary">
+                        {selectedCustomer.name}
+                      </h5>
+                      <p className="mb-0 small text-muted">
+                        Customer Information
+                      </p>
                     </div>
                   </div>
 
                   {/* Contact Information */}
                   <div className="d-flex flex-column gap-2">
                     {selectedCustomer.email && (
-                      <div className="d-flex align-items-center gap-2 p-2 rounded" style={{ backgroundColor: '#f8f9fa' }}>
-                        <i className="bi bi-envelope-fill text-primary" style={{ fontSize: '1.1rem', width: '24px' }}></i>
+                      <div
+                        className="d-flex align-items-center gap-2 p-2 rounded"
+                        style={{ backgroundColor: "#f8f9fa" }}
+                      >
+                        <i
+                          className="bi bi-envelope-fill text-primary"
+                          style={{ fontSize: "1.1rem", width: "24px" }}
+                        ></i>
                         <div className="flex-grow-1">
-                          <div className="small text-muted mb-0" style={{ fontSize: '0.7rem' }}>Email</div>
-                          <div className="fw-semibold small">{selectedCustomer.email}</div>
+                          <div
+                            className="small text-muted mb-0"
+                            style={{ fontSize: "0.7rem" }}
+                          >
+                            Email
+                          </div>
+                          <div className="fw-semibold small">
+                            {selectedCustomer.email}
+                          </div>
                         </div>
                       </div>
                     )}
                     {selectedCustomer.phone && (
-                      <div className="d-flex align-items-center gap-2 p-2 rounded" style={{ backgroundColor: '#f8f9fa' }}>
-                        <i className="bi bi-telephone-fill text-primary" style={{ fontSize: '1.1rem', width: '24px' }}></i>
+                      <div
+                        className="d-flex align-items-center gap-2 p-2 rounded"
+                        style={{ backgroundColor: "#f8f9fa" }}
+                      >
+                        <i
+                          className="bi bi-telephone-fill text-primary"
+                          style={{ fontSize: "1.1rem", width: "24px" }}
+                        ></i>
                         <div className="flex-grow-1">
-                          <div className="small text-muted mb-0" style={{ fontSize: '0.7rem' }}>Phone</div>
-                          <div className="fw-semibold small">{selectedCustomer.phone}</div>
+                          <div
+                            className="small text-muted mb-0"
+                            style={{ fontSize: "0.7rem" }}
+                          >
+                            Phone
+                          </div>
+                          <div className="fw-semibold small">
+                            {selectedCustomer.phone}
+                          </div>
                         </div>
                       </div>
                     )}
@@ -862,9 +1031,9 @@ const Billing: React.FC = () => {
                       className="btn btn-outline-danger btn-sm"
                       onClick={() => {
                         setSelectedCustomer(null);
-                        toast.info('Customer selection cleared');
+                        toast.info("Customer selection cleared");
                       }}
-                      style={{ minWidth: '100px' }}
+                      style={{ minWidth: "100px" }}
                     >
                       <i className="bi bi-x-circle me-1"></i>
                       Clear
@@ -873,14 +1042,19 @@ const Billing: React.FC = () => {
                 </>
               ) : (
                 <div className="empty-state text-center py-4">
-                  <div 
+                  <div
                     className="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
-                    style={{ width: '80px', height: '80px' }}
+                    style={{ width: "80px", height: "80px" }}
                   >
-                    <i className="bi bi-person-circle text-primary" style={{ fontSize: '3rem' }}></i>
+                    <i
+                      className="bi bi-person-circle text-primary"
+                      style={{ fontSize: "3rem" }}
+                    ></i>
                   </div>
                   <h6 className="fw-semibold mb-2">No Customer Selected</h6>
-                  <p className="text-muted mb-3 small">Select a customer to associate with this invoice</p>
+                  <p className="text-muted mb-3 small">
+                    Select a customer to associate with this invoice
+                  </p>
                   <button
                     type="button"
                     className="btn btn-primary btn-sm"
@@ -889,7 +1063,7 @@ const Billing: React.FC = () => {
                       setModalSearch("");
                       setShowCustomerModal(true);
                     }}
-                    style={{ borderRadius: '8px' }}
+                    style={{ borderRadius: "8px" }}
                   >
                     <i className="bi bi-person-plus me-2"></i>
                     Select Customer
@@ -910,7 +1084,9 @@ const Billing: React.FC = () => {
                   <i className="bi bi-clock-history me-2"></i>
                   Recently Created
                 </span>
-                <span className="badge bg-info">{recentlyCreatedCustomers.length}</span>
+                <span className="badge bg-info">
+                  {recentlyCreatedCustomers.length}
+                </span>
               </div>
               <div className="card-body">
                 <div className="list-group list-group-flush">
@@ -920,14 +1096,14 @@ const Billing: React.FC = () => {
                       className="list-group-item px-0 py-2 border-bottom"
                       style={{
                         animationDelay: `${index * 50}ms`,
-                        cursor: 'pointer',
-                        transition: 'background-color 0.2s ease',
+                        cursor: "pointer",
+                        transition: "background-color 0.2s ease",
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#f8f9fa';
+                        e.currentTarget.style.backgroundColor = "#f8f9fa";
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.backgroundColor = "transparent";
                       }}
                       onClick={() => {
                         setSelectedCustomer(customer);
@@ -939,14 +1115,25 @@ const Billing: React.FC = () => {
                           <div className="fw-semibold small">
                             {customer.name}
                             {selectedCustomer?.id === customer.id && (
-                              <span className="badge bg-success ms-2">Selected</span>
+                              <span className="badge bg-success ms-2">
+                                Selected
+                              </span>
                             )}
                           </div>
-                          <div className="text-muted" style={{ fontSize: '0.75rem' }}>
-                            {customer.phone && <span><i className="bi bi-telephone me-1"></i>{customer.phone}</span>}
+                          <div
+                            className="text-muted"
+                            style={{ fontSize: "0.75rem" }}
+                          >
+                            {customer.phone && (
+                              <span>
+                                <i className="bi bi-telephone me-1"></i>
+                                {customer.phone}
+                              </span>
+                            )}
                             {customer.email && (
-                              <span className={customer.phone ? ' ms-2' : ''}>
-                                <i className="bi bi-envelope me-1"></i>{customer.email}
+                              <span className={customer.phone ? " ms-2" : ""}>
+                                <i className="bi bi-envelope me-1"></i>
+                                {customer.email}
                               </span>
                             )}
                           </div>
@@ -956,7 +1143,9 @@ const Billing: React.FC = () => {
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedCustomer(customer);
-                            toast.success(`Customer "${customer.name}" selected`);
+                            toast.success(
+                              `Customer "${customer.name}" selected`
+                            );
                           }}
                         >
                           <i className="bi bi-check-circle"></i>
@@ -971,13 +1160,13 @@ const Billing: React.FC = () => {
         </div>
       </div>
 
-      <Modal 
-        show={showCustomerModal} 
+      <Modal
+        show={showCustomerModal}
         onHide={() => {
           setShowCustomerModal(false);
           setCustomerErrors({});
-        }} 
-        centered 
+        }}
+        centered
         size="lg"
         className="customer-modal"
       >
@@ -992,65 +1181,102 @@ const Billing: React.FC = () => {
           <div className="d-flex gap-2 mb-4" role="group">
             <button
               type="button"
-              className={`btn flex-fill ${modalMode === "select" ? "btn-primary" : "btn-outline-primary"}`}
+              className={`btn flex-fill ${
+                modalMode === "select" ? "btn-primary" : "btn-outline-primary"
+              }`}
               onClick={() => setModalMode("select")}
               style={{
-                transition: 'all 0.3s ease',
-                borderRadius: '8px',
-                fontWeight: modalMode === "select" ? '600' : '400',
+                transition: "all 0.3s ease",
+                borderRadius: "8px",
+                fontWeight: modalMode === "select" ? "600" : "400",
               }}
             >
-              <i className={`bi ${modalMode === "select" ? "bi-check-circle-fill" : "bi-people"} me-2`}></i>
+              <i
+                className={`bi ${
+                  modalMode === "select" ? "bi-check-circle-fill" : "bi-people"
+                } me-2`}
+              ></i>
               Existing Customer
             </button>
             <button
               type="button"
-              className={`btn flex-fill ${modalMode === "create" ? "btn-primary" : "btn-outline-primary"}`}
+              className={`btn flex-fill ${
+                modalMode === "create" ? "btn-primary" : "btn-outline-primary"
+              }`}
               onClick={() => setModalMode("create")}
               style={{
-                transition: 'all 0.3s ease',
-                borderRadius: '8px',
-                fontWeight: modalMode === "create" ? '600' : '400',
+                transition: "all 0.3s ease",
+                borderRadius: "8px",
+                fontWeight: modalMode === "create" ? "600" : "400",
               }}
             >
-              <i className={`bi ${modalMode === "create" ? "bi-check-circle-fill" : "bi-person-plus"} me-2`}></i>
+              <i
+                className={`bi ${
+                  modalMode === "create"
+                    ? "bi-check-circle-fill"
+                    : "bi-person-plus"
+                } me-2`}
+              ></i>
               New Customer
             </button>
           </div>
 
           {/* Select Customer Pane */}
-          <div 
-            className={`select-customer-pane ${modalMode === "select" ? "active" : ""}`}
+          <div
+            className={`select-customer-pane ${
+              modalMode === "select" ? "active" : ""
+            }`}
             style={{
               display: modalMode === "select" ? "block" : "none",
-              animation: modalMode === "select" ? "slideInRight 0.4s ease-out" : "none",
+              animation:
+                modalMode === "select" ? "slideInRight 0.4s ease-out" : "none",
             }}
           >
             <div className="position-relative mb-3">
-              <i className="bi bi-search position-absolute" style={{ left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#6c757d', zIndex: 10 }}></i>
+              <i
+                className="bi bi-search position-absolute"
+                style={{
+                  left: "12px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  color: "#6c757d",
+                  zIndex: 10,
+                }}
+              ></i>
               <input
                 className="form-control glow-control ps-5"
                 placeholder="Search by name, email, or phone"
                 value={modalSearch}
                 onChange={(e) => setModalSearch(e.target.value)}
-                style={{ borderRadius: '8px' }}
+                style={{ borderRadius: "8px" }}
               />
             </div>
-            <div className="scroll-shadow" style={{ maxHeight: "350px", borderRadius: '8px' }}>
+            <div
+              className="scroll-shadow"
+              style={{ maxHeight: "350px", borderRadius: "8px" }}
+            >
               {loadingCustomers ? (
                 <div className="empty-state text-center py-5">
-                  <div className="spinner-border text-primary mb-3" role="status">
+                  <div
+                    className="spinner-border text-primary mb-3"
+                    role="status"
+                  >
                     <span className="visually-hidden">Loading...</span>
                   </div>
                   <p className="text-muted mb-0 small">Loading customers...</p>
                 </div>
               ) : filteredModalCustomers.length === 0 ? (
                 <div className="empty-state text-center py-5">
-                  <div className="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style={{ width: '80px', height: '80px' }}>
+                  <div
+                    className="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                    style={{ width: "80px", height: "80px" }}
+                  >
                     <i className="bi bi-search fs-2 text-muted"></i>
                   </div>
                   <h6 className="fw-semibold mb-2">No customers found</h6>
-                  <p className="text-muted mb-0 small">Try a different search term or create a new customer.</p>
+                  <p className="text-muted mb-0 small">
+                    Try a different search term or create a new customer.
+                  </p>
                 </div>
               ) : (
                 <div className="list-group list-group-flush">
@@ -1065,29 +1291,40 @@ const Billing: React.FC = () => {
                         toast.success(`Customer "${customer.name}" selected`);
                       }}
                       style={{
-                        animation: `fadeInUp 0.3s ease-out ${index * 0.05}s both`,
-                        borderRadius: '8px',
-                        marginBottom: '4px',
-                        transition: 'all 0.2s ease',
-                        cursor: 'pointer',
+                        animation: `fadeInUp 0.3s ease-out ${
+                          index * 0.05
+                        }s both`,
+                        borderRadius: "8px",
+                        marginBottom: "4px",
+                        transition: "all 0.2s ease",
+                        cursor: "pointer",
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#f8f9fa';
-                        e.currentTarget.style.transform = 'translateX(4px)';
+                        e.currentTarget.style.backgroundColor = "#f8f9fa";
+                        e.currentTarget.style.transform = "translateX(4px)";
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = '';
-                        e.currentTarget.style.transform = 'translateX(0)';
+                        e.currentTarget.style.backgroundColor = "";
+                        e.currentTarget.style.transform = "translateX(0)";
                       }}
                     >
                       <div className="d-flex align-items-center gap-3">
-                        <div className="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style={{ width: '45px', height: '45px', minWidth: '45px' }}>
+                        <div
+                          className="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center"
+                          style={{
+                            width: "45px",
+                            height: "45px",
+                            minWidth: "45px",
+                          }}
+                        >
                           <i className="bi bi-person-fill text-primary"></i>
                         </div>
                         <div>
                           <div className="fw-semibold">{customer.name}</div>
                           <div className="small text-muted">
-                            {[customer.email, customer.phone].filter(Boolean).join(" · ") || "No contact info"}
+                            {[customer.email, customer.phone]
+                              .filter(Boolean)
+                              .join(" · ") || "No contact info"}
                           </div>
                         </div>
                       </div>
@@ -1100,32 +1337,45 @@ const Billing: React.FC = () => {
           </div>
 
           {/* Create Customer Pane */}
-          <div 
-            className={`create-customer-pane ${modalMode === "create" ? "active" : ""}`}
+          <div
+            className={`create-customer-pane ${
+              modalMode === "create" ? "active" : ""
+            }`}
             style={{
               display: modalMode === "create" ? "block" : "none",
-              animation: modalMode === "create" ? "slideInLeft 0.4s ease-out" : "none",
+              animation:
+                modalMode === "create" ? "slideInLeft 0.4s ease-out" : "none",
             }}
           >
             <div className="row g-3">
               <div className="col-12">
                 <label className="form-label fw-semibold d-flex align-items-center gap-2">
                   <i className="bi bi-person text-primary"></i>
-                  Full Name <span style={{ color: 'red' }}>*</span>
+                  Full Name <span style={{ color: "red" }}>*</span>
                 </label>
                 <input
-                  className={`form-control glow-control${customerErrors.name ? " is-invalid" : ""}`}
+                  className={`form-control glow-control${
+                    customerErrors.name ? " is-invalid" : ""
+                  }`}
                   name="name"
                   value={customerForm.name}
-                  onChange={(e) => setCustomerForm((prev) => ({ ...prev, name: e.target.value }))}
+                  onChange={(e) =>
+                    setCustomerForm((prev) => ({
+                      ...prev,
+                      name: e.target.value,
+                    }))
+                  }
                   placeholder="Enter customer full name"
-                  style={{ 
-                    borderRadius: '8px',
-                    animation: 'fadeInUp 0.3s ease-out 0.1s both',
+                  style={{
+                    borderRadius: "8px",
+                    animation: "fadeInUp 0.3s ease-out 0.1s both",
                   }}
                 />
                 {customerErrors.name && (
-                  <div className="invalid-feedback d-block animate-fade-in" style={{ animation: 'fadeIn 0.3s ease-out' }}>
+                  <div
+                    className="invalid-feedback d-block animate-fade-in"
+                    style={{ animation: "fadeIn 0.3s ease-out" }}
+                  >
                     {customerErrors.name}
                   </div>
                 )}
@@ -1136,19 +1386,29 @@ const Billing: React.FC = () => {
                   Email Address
                 </label>
                 <input
-                  className={`form-control glow-control${customerErrors.email ? " is-invalid" : ""}`}
+                  className={`form-control glow-control${
+                    customerErrors.email ? " is-invalid" : ""
+                  }`}
                   name="email"
                   type="email"
                   value={customerForm.email}
-                  onChange={(e) => setCustomerForm((prev) => ({ ...prev, email: e.target.value }))}
+                  onChange={(e) =>
+                    setCustomerForm((prev) => ({
+                      ...prev,
+                      email: e.target.value,
+                    }))
+                  }
                   placeholder="name@example.com"
-                  style={{ 
-                    borderRadius: '8px',
-                    animation: 'fadeInUp 0.3s ease-out 0.2s both',
+                  style={{
+                    borderRadius: "8px",
+                    animation: "fadeInUp 0.3s ease-out 0.2s both",
                   }}
                 />
                 {customerErrors.email && (
-                  <div className="invalid-feedback d-block animate-fade-in" style={{ animation: 'fadeIn 0.3s ease-out' }}>
+                  <div
+                    className="invalid-feedback d-block animate-fade-in"
+                    style={{ animation: "fadeIn 0.3s ease-out" }}
+                  >
                     {customerErrors.email}
                   </div>
                 )}
@@ -1159,19 +1419,29 @@ const Billing: React.FC = () => {
                   Phone Number
                 </label>
                 <input
-                  className={`form-control glow-control${customerErrors.phone ? " is-invalid" : ""}`}
+                  className={`form-control glow-control${
+                    customerErrors.phone ? " is-invalid" : ""
+                  }`}
                   name="phone"
                   value={customerForm.phone}
-                  onChange={(e) => setCustomerForm((prev) => ({ ...prev, phone: e.target.value }))}
+                  onChange={(e) =>
+                    setCustomerForm((prev) => ({
+                      ...prev,
+                      phone: e.target.value,
+                    }))
+                  }
                   placeholder="Optional phone number"
                   maxLength={15}
-                  style={{ 
-                    borderRadius: '8px',
-                    animation: 'fadeInUp 0.3s ease-out 0.3s both',
+                  style={{
+                    borderRadius: "8px",
+                    animation: "fadeInUp 0.3s ease-out 0.3s both",
                   }}
                 />
                 {customerErrors.phone && (
-                  <div className="invalid-feedback d-block animate-fade-in" style={{ animation: 'fadeIn 0.3s ease-out' }}>
+                  <div
+                    className="invalid-feedback d-block animate-fade-in"
+                    style={{ animation: "fadeIn 0.3s ease-out" }}
+                  >
                     {customerErrors.phone}
                   </div>
                 )}
@@ -1180,13 +1450,13 @@ const Billing: React.FC = () => {
           </div>
         </Modal.Body>
         <Modal.Footer className="border-top">
-          <Button 
-            variant="secondary" 
+          <Button
+            variant="secondary"
             onClick={() => {
               setShowCustomerModal(false);
               setCustomerErrors({});
             }}
-            style={{ borderRadius: '8px' }}
+            style={{ borderRadius: "8px" }}
           >
             Cancel
           </Button>
@@ -1200,7 +1470,10 @@ const Billing: React.FC = () => {
                 const trimmedPhone = customerForm.phone.trim();
                 const errs: { [key: string]: string } = {};
                 if (!trimmedName) errs.name = "Customer name is required";
-                if (trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+                if (
+                  trimmedEmail &&
+                  !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)
+                ) {
                   errs.email = "Enter a valid email";
                 }
                 if (trimmedPhone && trimmedPhone.length < 6) {
@@ -1211,12 +1484,15 @@ const Billing: React.FC = () => {
 
                 try {
                   setLoadingCustomers(true);
-                  const newCustomer = await createCustomer({
-                    name: trimmedName,
-                    email: trimmedEmail || undefined,
-                    phone: trimmedPhone || undefined,
-                  }, { token });
-                  
+                  const newCustomer = await createCustomer(
+                    {
+                      name: trimmedName,
+                      email: trimmedEmail || undefined,
+                      phone: trimmedPhone || undefined,
+                    },
+                    { token }
+                  );
+
                   // Update local state and Redux
                   setApiCustomers([...apiCustomers, newCustomer]);
                   // Note: addCustomer in slice expects Omit<Customer, 'id'>, but we have full Customer from API
@@ -1224,25 +1500,35 @@ const Billing: React.FC = () => {
                   const updatedCustomers = [...apiCustomers, newCustomer];
                   dispatch(setCustomers(updatedCustomers));
                   setSelectedCustomer(newCustomer);
-                  
+
                   // Add to recently created customers (keep last 5)
-                  setRecentlyCreatedCustomers(prev => {
-                    const updated = [newCustomer, ...prev.filter(c => c.id !== newCustomer.id)];
+                  setRecentlyCreatedCustomers((prev) => {
+                    const updated = [
+                      newCustomer,
+                      ...prev.filter((c) => c.id !== newCustomer.id),
+                    ];
                     return updated.slice(0, 5);
                   });
-                  
-                  toast.success(`Customer "${newCustomer.name}" created successfully!`);
-                  
+
+                  toast.success(
+                    `Customer "${newCustomer.name}" created successfully!`
+                  );
+
                   setCustomerForm({ name: "", email: "", phone: "" });
                   setCustomerErrors({});
                   setModalMode("select");
                   setModalSearch("");
                   setShowCustomerModal(false);
                 } catch (error) {
-                  console.error('[Billing] Failed to create customer:', error);
+                  console.error("[Billing] Failed to create customer:", error);
                   if (error instanceof ApiError) {
-                    if (error.details && typeof error.details === 'object' && 'details' in error.details) {
-                      const validationErrors = (error.details as any).details || [];
+                    if (
+                      error.details &&
+                      typeof error.details === "object" &&
+                      "details" in error.details
+                    ) {
+                      const validationErrors =
+                        (error.details as any).details || [];
                       const errs: { [key: string]: string } = {};
                       validationErrors.forEach((err: any) => {
                         if (err.path) {
@@ -1251,20 +1537,26 @@ const Billing: React.FC = () => {
                       });
                       setCustomerErrors(errs);
                     } else {
-                      toast.error(`Failed to create customer: ${error.message}`);
+                      toast.error(
+                        `Failed to create customer: ${error.message}`
+                      );
                     }
                   } else {
-                    toast.error('Failed to create customer. Please try again.');
+                    toast.error("Failed to create customer. Please try again.");
                   }
                 } finally {
                   setLoadingCustomers(false);
                 }
               }}
-              style={{ borderRadius: '8px' }}
+              style={{ borderRadius: "8px" }}
             >
               {loadingCustomers ? (
                 <>
-                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  <span
+                    className="spinner-border spinner-border-sm me-2"
+                    role="status"
+                    aria-hidden="true"
+                  ></span>
                   Saving...
                 </>
               ) : (
@@ -1279,7 +1571,7 @@ const Billing: React.FC = () => {
               variant="primary"
               disabled={!selectedCustomer}
               onClick={() => setShowCustomerModal(false)}
-              style={{ borderRadius: '8px' }}
+              style={{ borderRadius: "8px" }}
             >
               <i className="bi bi-check-circle me-2"></i>
               Use Selected Customer

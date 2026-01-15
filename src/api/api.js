@@ -345,5 +345,57 @@ export const getProductByBarcode = async (barcode, options) => {
   });
 };
 
+/**
+ * Download bulk upload template
+ * @param {{ token?: string }} [options]
+ */
+export const downloadBulkTemplate = async (options) => {
+  const { token } = options || {};
+  const url = makeUrl('/api/products/bulk/template');
+  
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    },
+  });
+
+  if (!response.ok) {
+    throw new ApiError('Failed to download template', response.status);
+  }
+
+  return response.blob();
+};
+
+/**
+ * Bulk upload products from Excel file
+ * @param {File} file - Excel file to upload
+ * @param {'create' | 'update' | 'upsert'} [operation='upsert'] - Operation type
+ * @param {{ token?: string }} [options]
+ */
+export const bulkUploadProducts = async (file, operation = 'upsert', options) => {
+  const { token } = options || {};
+  const url = makeUrl(`/api/products/bulk/upload?operation=${operation}`);
+  
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    },
+    body: formData,
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new ApiError(data.message || data.error || 'Bulk upload failed', response.status, data);
+  }
+
+  return data;
+};
+
 export { ApiError };
 
