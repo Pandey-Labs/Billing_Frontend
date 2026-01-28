@@ -155,7 +155,7 @@ const Login: React.FC = () => {
                             </div>
                         </div>
                         <div className="col-lg-6 bg-white d-flex align-items-center animate-auth-form">
-                            <div className="w-100 p-4 p-md-5">
+                            <div className="w-100 p-4 p-md-3">
                                 <div className="d-lg-none text-center mb-4">
                                     <div className="auth-logo-circle mx-auto mb-3">
                                         <i className="bi bi-receipt-cutoff"></i>
@@ -185,98 +185,98 @@ const Login: React.FC = () => {
                                         </div>
                                     </div>
                                     <h4 className="fw-bold mb-1">{mode === 'signin' ? 'Sign in to your account' : 'Create a new account'}</h4>
-                                    <p className="text-muted mb-0">{mode === 'signin' ? 'Use your admin credentials to continue.' : 'Enter details to create your account.'}</p>
+                                    <p className="text-muted mb-0">{mode === 'signin' ? 'Use your admin credentials to continue.' : ''}</p>
                                 </div>
                                 {mode === 'signin' ? (
                                     <form onSubmit={submit} className="auth-form">
-                                    <div className="mb-3">
-                                        <label className="form-label fw-semibold text-dark">Company name</label>
-                                        <div className="input-group auth-input-group">
-                                            <span className="input-group-text">
-                                                <i className="bi bi-building"></i>
-                                            </span>
-                                            <input
-                                                className="form-control auth-input"
-                                                value={companyName}
-                                                onChange={e => setCompanyName(e.target.value)}
-                                                placeholder="Your company"
-                                                type="text"
-                                                required
-                                                autoComplete="organization"
-                                            />
+                                        <div className="mb-3">
+                                            <label className="form-label fw-semibold text-dark">Company name</label>
+                                            <div className="input-group auth-input-group">
+                                                <span className="input-group-text">
+                                                    <i className="bi bi-building"></i>
+                                                </span>
+                                                <input
+                                                    className="form-control auth-input"
+                                                    value={companyName}
+                                                    onChange={e => setCompanyName(e.target.value)}
+                                                    placeholder="Your company"
+                                                    type="text"
+                                                    required
+                                                    autoComplete="organization"
+                                                />
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="mb-3">
-                                        <label className="form-label fw-semibold text-dark">Email address</label>
-                                        <div className="input-group auth-input-group">
-                                            <span className="input-group-text">
-                                                <i className="bi bi-envelope"></i>
-                                            </span>
-                                            <input
-                                                className="form-control auth-input"
-                                                value={email}
-                                                onChange={e => setEmail(e.target.value)}
-                                                placeholder="you@example.com"
-                                                type="email"
-                                                required
-                                                autoComplete="email"
-                                            />
+                                        <div className="mb-3">
+                                            <label className="form-label fw-semibold text-dark">Email address</label>
+                                            <div className="input-group auth-input-group">
+                                                <span className="input-group-text">
+                                                    <i className="bi bi-envelope"></i>
+                                                </span>
+                                                <input
+                                                    className="form-control auth-input"
+                                                    value={email}
+                                                    onChange={e => setEmail(e.target.value)}
+                                                    placeholder="you@example.com"
+                                                    type="email"
+                                                    required
+                                                    autoComplete="email"
+                                                />
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="mb-3">
-                                        <label className="form-label fw-semibold text-dark">Password</label>
-                                        <div className="input-group auth-input-group">
-                                            <span className="input-group-text">
-                                                <i className="bi bi-lock"></i>
-                                            </span>
-                                            <input
-                                                className="form-control auth-input"
-                                                type={showPassword ? 'text' : 'password'}
-                                                value={password}
-                                                onChange={e => setPassword(e.target.value)}
-                                                placeholder="••••••••"
-                                                required
-                                                minLength={6}
-                                                autoComplete="current-password"
-                                            />
-                                            <button type="button" className="btn btn-outline-secondary" onClick={() => setShowPassword(s => !s)} aria-label={showPassword ? 'Hide password' : 'Show password'}>
-                                                <i className={showPassword ? 'bi bi-eye-slash' : 'bi bi-eye'}></i>
-                                            </button>
+                                        <div className="mb-3">
+                                            <label className="form-label fw-semibold text-dark">Password</label>
+                                            <div className="input-group auth-input-group">
+                                                <span className="input-group-text">
+                                                    <i className="bi bi-lock"></i>
+                                                </span>
+                                                <input
+                                                    className="form-control auth-input"
+                                                    type={showPassword ? 'text' : 'password'}
+                                                    value={password}
+                                                    onChange={e => setPassword(e.target.value)}
+                                                    placeholder="••••••••"
+                                                    required
+                                                    minLength={6}
+                                                    autoComplete="current-password"
+                                                />
+                                                <button type="button" className="btn btn-outline-secondary" onClick={() => setShowPassword(s => !s)} aria-label={showPassword ? 'Hide password' : 'Show password'}>
+                                                    <i className={showPassword ? 'bi bi-eye-slash' : 'bi bi-eye'}></i>
+                                                </button>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="mb-3">
-                                        <label className="form-label fw-semibold text-dark d-flex justify-content-between align-items-center">
-                                            <span>Solve captcha</span>
-                                            <button
-                                                type="button"
-                                                className="btn btn-link p-0 auth-refresh-btn"
-                                                onClick={() => {
-                                                    setCaptchaError(null)
-                                                    generateCaptcha()
-                                                }}
-                                            >
-                                                <i className="bi bi-arrow-clockwise me-1"></i>
-                                                Refresh
-                                            </button>
-                                        </label>
-                                        <div className="input-group auth-input-group">
-                                            <span className="input-group-text">{captchaQuestion}</span>
-                                            <input
-                                                className="form-control auth-input"
-                                                value={captchaInput}
-                                                onChange={e => setCaptchaInput(e.target.value.replace(/[^0-9]/g, ''))}
-                                                placeholder="Answer"
-                                                required
-                                            />
+                                        <div className="mb-3">
+                                            <label className="form-label fw-semibold text-dark d-flex justify-content-between align-items-center">
+                                                <span>Solve captcha</span>
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-link p-0 auth-refresh-btn"
+                                                    onClick={() => {
+                                                        setCaptchaError(null)
+                                                        generateCaptcha()
+                                                    }}
+                                                >
+                                                    <i className="bi bi-arrow-clockwise me-1"></i>
+                                                    Refresh
+                                                </button>
+                                            </label>
+                                            <div className="input-group auth-input-group">
+                                                <span className="input-group-text">{captchaQuestion}</span>
+                                                <input
+                                                    className="form-control auth-input"
+                                                    value={captchaInput}
+                                                    onChange={e => setCaptchaInput(e.target.value.replace(/[^0-9]/g, ''))}
+                                                    placeholder="Answer"
+                                                    required
+                                                />
+                                            </div>
+                                            {captchaError && <small className="text-danger d-block mt-1">{captchaError}</small>}
                                         </div>
-                                        {captchaError && <small className="text-danger d-block mt-1">{captchaError}</small>}
-                                    </div>
-                                    {apiError && (
-                                        <div className="alert alert-danger py-2 px-3 auth-alert" role="alert">
-                                            <i className="bi bi-exclamation-octagon me-2"></i>
-                                            {apiError}
-                                        </div>
-                                    )}
+                                        {apiError && (
+                                            <div className="alert alert-danger py-2 px-3 auth-alert" role="alert">
+                                                <i className="bi bi-exclamation-octagon me-2"></i>
+                                                {apiError}
+                                            </div>
+                                        )}
                                         <button className="btn btn-primary w-100 auth-submit" disabled={loading}>
                                             {loading ? (
                                                 <span className="d-inline-flex align-items-center gap-2">
@@ -357,17 +357,17 @@ const Login: React.FC = () => {
                                         </div>
 
                                         <div className="row">
-                                                <div className="col mb-3">
-                                                    <div className="form-floating">
-                                                        <select id="regState" className="form-select" value={regState} onChange={e => setRegState(e.target.value)}>
-                                                            <option value="">Select state</option>
-                                                            {INDIA_STATES.map(s => (
-                                                                <option key={s.code} value={s.name}>{s.name}</option>
-                                                            ))}
-                                                        </select>
-                                                        <label htmlFor="regState">State</label>
-                                                    </div>
+                                            <div className="col mb-3">
+                                                <div className="form-floating">
+                                                    <select id="regState" className="form-select" value={regState} onChange={e => setRegState(e.target.value)}>
+                                                        <option value="">Select state</option>
+                                                        {INDIA_STATES.map(s => (
+                                                            <option key={s.code} value={s.name}>{s.name}</option>
+                                                        ))}
+                                                    </select>
+                                                    <label htmlFor="regState">State</label>
                                                 </div>
+                                            </div>
                                             <div className="col mb-3">
                                                 <div className="form-floating">
                                                     <select id="regCity" className="form-select" value={regCity} onChange={e => setRegCity(e.target.value)} disabled={!regState}>
