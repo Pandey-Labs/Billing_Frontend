@@ -1,4 +1,4 @@
-import type { Product } from '../types';
+import type { Product, Customer, Invoice } from '../types';
 
 export declare class ApiError extends Error {
   status: number;
@@ -85,7 +85,6 @@ export declare function getDashboard(
   options?: RequestInit & { token?: string },
 ): Promise<DashboardData>;
 
-import type { Customer } from '../types';
 
 export declare function getCustomers(
   options?: RequestInit & { token?: string; search?: string },
@@ -112,7 +111,6 @@ export declare function deleteCustomer(
   options?: RequestInit & { token?: string },
 ): Promise<{ id: string }>;
 
-import type { Invoice } from '../types';
 
 export declare function getSalesReport(
   options?: RequestInit & { token?: string },
