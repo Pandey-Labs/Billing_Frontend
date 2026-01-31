@@ -73,7 +73,7 @@ class ApiError extends Error {
  */
 const handleUnauthorized = (path) => {
   try {
-    if (typeof path === 'string' && (path.startsWith('/api/auth') || path.startsWith('/api/register'))) {
+    if (typeof path === 'string' && (path.startsWith('/api/auth') || path.startsWith('/api/auth/register'))) {
       return;
     }
     if (typeof window === 'undefined') return;
@@ -184,7 +184,7 @@ export const login = async (credentials) => {
     throw new ApiError('Password must be at least 6 characters long', 400);
   }
 
-  return request('/api/login', {
+  return request('/api/auth/login', {
     method: 'POST',
     body: {
       companyName,
@@ -200,7 +200,7 @@ export const login = async (credentials) => {
 export const register = async (payload) => {
   const email = String(payload.email || '').trim();
   if (!email) throw new ApiError('Email is required', 400);
-  return request('/api/register', {
+  return request('/api/auth/register', {
     method: 'POST',
     body: payload,
   });

@@ -72,14 +72,14 @@ const Register: React.FC = () => {
             </div>
 
             <div className="form-floating mb-3">
-              <input id="rCompany" value={companyName} onChange={(e) => setCompanyName(e.target.value)} className="form-control" placeholder="Company name" />
+              <input id="rCompany" value={companyName} onChange={(e) => setCompanyName(e.target.value)} className="form-control" placeholder="Company name" required />
               <label htmlFor="rCompany">Company Name</label>
             </div>
 
             <div className="row">
                 <div className="col mb-3">
                   <div className="form-floating">
-                    <select id="rState" value={stateVal} onChange={(e) => setStateVal(e.target.value)} className="form-select">
+                    <select id="rState" value={stateVal} onChange={(e) => setStateVal(e.target.value)} className="form-select" required>
                       <option value="">Select state</option>
                       {INDIA_STATES.map(s => (
                         <option key={s.code} value={s.name}>{s.name}</option>
@@ -90,7 +90,7 @@ const Register: React.FC = () => {
                 </div>
               <div className="col mb-3">
                 <div className="form-floating">
-                  <select id="rCity" value={city} onChange={(e) => setCity(e.target.value)} className="form-select" disabled={!stateVal}>
+                  <select id="rCity" value={city} onChange={(e) => setCity(e.target.value)} className="form-select" disabled={!stateVal} required>
                     <option value="">{stateVal ? 'Select city' : 'Select state first'}</option>
                     {(INDIA_CITIES[stateVal] || []).map((c) => (
                       <option key={c} value={c}>{c}</option>
