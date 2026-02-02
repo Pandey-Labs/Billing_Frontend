@@ -26,6 +26,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/products', label: 'Products', Icon: BoxSeam },
   { to: '/inventory', label: 'Inventory', Icon: ListColumns },
   { to: '/billing', label: 'Billing', Icon: Cart4 },
+  { to: '/billing-history', label: 'Billing History', Icon: ListColumns },
   { to: '/customers', label: 'Customers', Icon: People },
   { to: '/reports', label: 'Reports', Icon: GraphUp },
   { to: '/settings', label: 'Settings', Icon: Gear },

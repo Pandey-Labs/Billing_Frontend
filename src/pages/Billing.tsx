@@ -19,6 +19,7 @@ import {
   getCustomers,
   createCustomer,
   getProductByBarcode,
+  createInvoice,
   ApiError,
 } from "../api/api";
 import ApiErrorFallback from "../components/ApiErrorFallback";
@@ -381,7 +382,7 @@ const Billing: React.FC = () => {
       document.body.appendChild(script);
     });
 
-  const finalizeCheckout = () => {
+  const finalizeCheckout = async () => {
     if (cart.items.length === 0) return;
     const now = new Date();
     const invoiceId = now.getTime().toString();
@@ -398,6 +399,33 @@ const Billing: React.FC = () => {
       customer: selectedCustomer || null,
     };
 
+    // Persist invoice to backend so DB stock is decremented there.
+    try {
+      const { data } = await fetch('/api/invoices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(invoice),
+      }).then((r) => r.json());
+
+      // If backend succeeded, update local store
+      if (data && data.invoice) {
+        dispatch(addSale(data.invoice));
+        printInvoice(data.invoice);
+        // Update local product stock to match backend
+        if (cart.items && cart.items.length > 0) {
+          dispatch(
+            deductStock(cart.items.map((i) => ({ productId: i.productId, qty: i.qty })))
+          );
+        }
+        dispatch(clearCart());
+        toast.success('Invoice created successfully');
+        return;
+      }
+    } catch (e) {
+      console.warn('[Billing] Failed to persist invoice to backend, falling back to local update', e);
+    }
+
+    // Fallback: local-only invoice (offline or backend failed)
     dispatch(addSale(invoice));
     printInvoice(invoice);
     dispatch(
@@ -406,11 +434,27 @@ const Billing: React.FC = () => {
       )
     );
     dispatch(clearCart());
-    nav(`/invoice/${invoiceId}`);
+    toast.success('Invoice created successfully');
   };
 
   const handleCheckout = async () => {
     if (cart.items.length === 0 || processingPayment) return;
+
+    // Create invoice object upfront for use in handlers
+    const now = new Date();
+    const invoiceId = now.getTime().toString();
+    const invoice = {
+      id: invoiceId,
+      date: now.toISOString(),
+      createdDate: now.toLocaleDateString(),
+      createdTime: now.toLocaleTimeString(),
+      items: cart.items,
+      subtotal,
+      discount: effectiveDiscount,
+      tax,
+      total,
+      customer: selectedCustomer || null,
+    };
 
     // Get settings from Redux
 
@@ -480,9 +524,44 @@ const Billing: React.FC = () => {
       name: "Billing Sphere",
       description: `Invoice ${new Date().toLocaleString()}`,
       order_id: orderId,
-      handler: () => {
-        finalizeCheckout();
-        setProcessingPayment(false);
+      handler: async (response: any) => {
+        try {
+          setProcessingPayment(true);
+          // Attach payment details to invoice payload
+          const serverPayload = {
+            ...invoice,
+            payment: {
+              paymentId: response?.razorpay_payment_id,
+              orderId: response?.razorpay_order_id,
+              signature: response?.razorpay_signature,
+              method: response?.method || 'razorpay',
+            },
+            paymentStatus: 'paid',
+            paymentMethod: 'razorpay',
+            transactionId: response?.razorpay_payment_id,
+          };
+
+          // Persist invoice on backend (this will decrement stock server-side)
+          try {
+            await createInvoice(serverPayload, { token });
+            toast.success('Payment successful and invoice recorded');
+          } catch (err) {
+            console.error('[Billing] Failed to create invoice on server:', err);
+            toast.error('Payment succeeded but failed to record invoice on server');
+          }
+
+          // Update frontend state (local stock and cart)
+          dispatch(
+            deductStock(
+              cart.items.map((i) => ({ productId: i.productId, qty: i.qty }))
+            )
+          );
+          dispatch(clearCart());
+          dispatch(addSale(invoice));
+          printInvoice(invoice);
+        } finally {
+          setProcessingPayment(false);
+        }
       },
       prefill: {
         name: selectedCustomer?.name || "Guest Customer",

@@ -36,11 +36,61 @@ const Products: React.FC = () => {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
 
+  // Filter and pagination states
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterCategory, setFilterCategory] = useState("");
+  const [filterStock, setFilterStock] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [showFilters, setShowFilters] = useState(false);
+  const itemsPerPage = 10;
+
   useEffect(() => {
     if (status === "idle") {
       dispatch(fetchProducts());
     }
   }, [dispatch, status]);
+
+  // Get unique categories for filter
+  const categories = useMemo(() => {
+    const cats = new Set(products
+      .filter((p) => p.category)
+      .map((p) => p.category));
+    return Array.from(cats).sort();
+  }, [products]);
+
+  // Apply filters
+  const filteredProducts = useMemo(() => {
+    return products.filter((product) => {
+      const matchesSearch =
+        !searchTerm ||
+        product.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.barcode?.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesCategory = !filterCategory || product.category === filterCategory;
+
+      const matchesStock =
+        !filterStock ||
+        (filterStock === "low" && (product.stock ?? 0) > 0 && (product.stock ?? 0) <= 10) ||
+        (filterStock === "out" && (product.stock ?? 0) === 0) ||
+        (filterStock === "high" && (product.stock ?? 0) > 10);
+
+      return matchesSearch && matchesCategory && matchesStock;
+    });
+  }, [products, searchTerm, filterCategory, filterStock]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+  const paginatedProducts = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    return filteredProducts.slice(start, end);
+  }, [filteredProducts, currentPage]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterCategory, filterStock]);
 
   const variantsByParent = useMemo(() => {
     const map = new Map<string, any[]>();
@@ -181,7 +231,117 @@ const Products: React.FC = () => {
                 Products
               </h3>
               <p className="mb-0 text-white-50">
-                Keep an eye on your catalog, variants, and stock movement in one place.
+              </p>
+            </div>
+            <div className="d-flex align-items-center gap-3 flex-wrap">
+              <div className="stat-chip shadow-sm border border-light-subtle">
+                <span className="chip-label">Total Items</span>
+                <span className="chip-value">{products.length}</span>
+              </div>
+              <div className="stat-chip shadow-sm border border-light-subtle">
+                <span className="chip-label">Master Products</span>
+                <span className="chip-value">{masterProductCount}</span>
+              </div>
+              <div className="stat-chip shadow-sm border border-light-subtle">
+                <span className="chip-label">Variants</span>
+                <span className="chip-value">{variantCount}</span>
+              </div>
+              <button
+                className="btn btn-outline-light btn-lg shadow-sm"
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                <i className={`bi ${showFilters ? 'bi-funnel-fill' : 'bi-funnel'} me-1`}></i>
+                {showFilters ? 'Hide Filters' : 'Show Filters'}
+              </button>
+              <button 
+                className="btn btn-outline-light btn-lg shadow-sm"
+                onClick={() => setShowBulkUploadModal(true)}
+              >
+                <i className="bi bi-cloud-upload me-1"></i>
+                Bulk Upload
+              </button>
+              <Link to="/products/new" className="btn btn-light btn-lg shadow-sm">
+                <i className="bi bi-plus-circle me-1"></i>
+                Add Product
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Filter and Search Section - Collapsible */}
+        {showFilters && (
+        <div className="card shadow-sm border border-light-subtle mb-4">
+          <div className="card-body">
+            <div className="row g-3">
+              <div className="col-md-6">
+                <label className="form-label fw-semibold mb-2">Search</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Search by name, SKU, or barcode..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <div className="col-md-3">
+                <label className="form-label fw-semibold mb-2">Category</label>
+                <select
+                  className="form-select"
+                  value={filterCategory}
+                  onChange={(e) => setFilterCategory(e.target.value)}
+                >
+                  <option value="">All Categories</option>
+                  {categories.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="col-md-3">
+                <label className="form-label fw-semibold mb-2">Stock Level</label>
+                <select
+                  className="form-select"
+                  value={filterStock}
+                  onChange={(e) => setFilterStock(e.target.value)}
+                >
+                  <option value="">All Stock Levels</option>
+                  <option value="high">High (&gt;10)</option>
+                  <option value="low">Low (1-10)</option>
+                  <option value="out">Out of Stock</option>
+                </select>
+              </div>
+            </div>
+            <div className="mt-3 d-flex justify-content-between align-items-center">
+              <div className="text-muted small">
+                Showing {filteredProducts.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1} to{" "}
+                {Math.min(currentPage * itemsPerPage, filteredProducts.length)} of {filteredProducts.length} products
+              </div>
+              {(searchTerm || filterCategory || filterStock) && (
+                <button
+                  className="btn btn-sm btn-outline-secondary"
+                  onClick={() => {
+                    setSearchTerm("");
+                    setFilterCategory("");
+                    setFilterStock("");
+                  }}
+                >
+                  <i className="bi bi-x-circle me-1"></i>
+                  Clear Filters
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+        )}
+        {/* <div className="page-header card border gradient-bg text-white overflow-hidden flex-shrink-0 mb-4 shadow-sm border-light-subtle">
+          <div className="card-body d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+            <div>
+              <h3 className="fw-bold mb-1">
+                <i className="bi bi-box-seam me-2"></i>
+                Products
+              </h3>
+              <p className="mb-0 text-white-50">
               </p>
             </div>
             <div className="d-flex align-items-center gap-3 flex-wrap">
@@ -210,7 +370,7 @@ const Products: React.FC = () => {
               </Link>
             </div>
           </div>
-        </div>
+        </div> */}
 
         {/* Product Table */}
         <div className="card shadow-sm products-table-card border border-light-subtle flex-grow-1 d-flex flex-column overflow-hidden">
@@ -261,8 +421,15 @@ const Products: React.FC = () => {
                         No products available
                       </td>
                     </tr>
+                  ) : filteredProducts.length === 0 ? (
+                    <tr>
+                      <td colSpan={columnsCount} className="text-center text-muted py-5">
+                        <i className="bi bi-search fs-1 d-block mb-2"></i>
+                        No products match the selected filters
+                      </td>
+                    </tr>
                   ) : (
-                    products.map((p, index) => (
+                    paginatedProducts.map((p, index) => (
                       <tr
                         key={p.id}
                         className={`products-row ${p.parentProductId ? 'table-info' : ''}`}
@@ -339,6 +506,73 @@ const Products: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Pagination */}
+        {filteredProducts.length > 0 && (
+          <div className="d-flex justify-content-between align-items-center mt-4">
+            <div className="text-muted small">
+              Page {currentPage} of {totalPages}
+            </div>
+            <nav aria-label="Pagination" className="d-flex gap-1">
+              <button
+                className="btn btn-sm btn-outline-secondary"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(1)}
+                title="First page"
+              >
+                <i className="bi bi-chevron-double-left"></i>
+              </button>
+              <button
+                className="btn btn-sm btn-outline-secondary"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(currentPage - 1)}
+              >
+                <i className="bi bi-chevron-left"></i> Prev
+              </button>
+
+              {/* Page numbers */}
+              <div className="d-flex gap-1">
+                {Array.from({ length: Math.min(5, totalPages) }).map((_, idx) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = idx + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = idx + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + idx;
+                  } else {
+                    pageNum = currentPage - 2 + idx;
+                  }
+                  return (
+                    <button
+                      key={pageNum}
+                      className={`btn btn-sm ${currentPage === pageNum ? "btn-primary" : "btn-outline-secondary"}`}
+                      onClick={() => setCurrentPage(pageNum)}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                className="btn btn-sm btn-outline-secondary"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(currentPage + 1)}
+              >
+                Next <i className="bi bi-chevron-right"></i>
+              </button>
+              <button
+                className="btn btn-sm btn-outline-secondary"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(totalPages)}
+                title="Last page"
+              >
+                <i className="bi bi-chevron-double-right"></i>
+              </button>
+            </nav>
+          </div>
+        )}
       </div>
 
       {/* Delete Confirmation Modal */}

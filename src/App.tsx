@@ -21,6 +21,7 @@ const Invoice = lazy(() => import("./pages/Invoice"));
 const Reports = lazy(() => import("./pages/Reports"));
 const Settings = lazy(() => import("./pages/Settings"));
 const Admin = lazy(() => import("./pages/Admin"));
+const BillingHistory = lazy(() => import("./pages/BillingHistory"));
 
 /* =======================
    SIDEBAR CONTEXT
@@ -83,6 +84,7 @@ const App: React.FC = () => {
 
                     <Route path="/billing" element={<Billing />} />
                     <Route path="/invoice/:id" element={<Invoice />} />
+                    <Route path="/billing-history" element={<BillingHistory />} />
 
                     <Route path="/reports" element={<Reports />} />
                     <Route path="/settings" element={<Settings />} />

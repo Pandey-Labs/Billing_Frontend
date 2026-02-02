@@ -265,6 +265,19 @@ export const getDashboard = async (options) => {
 };
 
 /**
+ * Create invoice on backend
+ * @param {{ id?: string; date?: string; items: Array<any>; subtotal?: number; discount?: number; tax?: number; total?: number; customer?: any }} payload
+ * @param {{ token?: string }} [options]
+ */
+export const createInvoice = async (payload, options) => {
+  return request('/api/invoices', {
+    method: 'POST',
+    body: payload,
+    ...(options || {}),
+  });
+};
+
+/**
  * @param {{ search?: string; token?: string; [key: string]: any }} [options]
  */
 export const getCustomers = async (options) => {
@@ -395,6 +408,17 @@ export const bulkUploadProducts = async (file, operation = 'upsert', options) =>
   }
 
   return data;
+};
+
+/**
+ * Get billing history
+ * @param {{ token?: string; [key: string]: any }} [options]
+ */
+export const getBillingHistory = async (options) => {
+  return request('/api/billing-history', {
+    method: 'GET',
+    ...(options || {}),
+  });
 };
 
 export { ApiError };
