@@ -1,11 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState, Suspense } from 'react'
 import { useAppSelector, useAppDispatch } from '../store/hooks'
 import { loadSales, setSales } from '../slices/reportsSlice'
 import { Card, Button, Row, Col } from 'react-bootstrap'
-import { getSalesReport, ApiError } from '../api/api'
+import { getSalesReport, ApiError } from '../api/api.js'
 import { toast } from '../utils/toast'
 import ApiErrorFallback from '../components/ApiErrorFallback'
-import React, { Suspense } from 'react'
 const ReportsCharts = React.lazy(() => import('./ReportsCharts'))
 
 const COLORS = ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6f42c1', '#fd7e14']
