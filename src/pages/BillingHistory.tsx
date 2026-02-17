@@ -3,24 +3,28 @@ import { useAppSelector } from '../store/hooks';
 import type { RootState } from '../store/store';
 import { getBillingHistory, ApiError } from '../api/api.js';
 import { toast } from '../utils/toast';
-
-interface BillingHistoryItem {
-  id: string;
-  invoiceId: string;
-  orgId?: string;
-  items: Array<any>;
-  total: number;
-  createdAt: string;
-  meta?: Record<string, unknown>;
-}
+import RefundModal from '../components/RefundModal';
+import type { Invoice } from '../types';
 
 const BillingHistory: React.FC = () => {
   const token = useAppSelector((state: RootState) => state.auth.token) || undefined;
-  const [history, setHistory] = useState<BillingHistoryItem[]>([]);
+  const [history, setHistory] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+
+  const openRefundModal = (invoice: Invoice) => {
+    setSelectedInvoice(invoice);
+    setIsRefundModalOpen(true);
+  };
+
+  const closeRefundModal = () => {
+    setSelectedInvoice(null);
+    setIsRefundModalOpen(false);
+  };
 
   const fetchBillingHistory = async () => {
     try {
@@ -130,11 +134,15 @@ const BillingHistory: React.FC = () => {
               <table className="table table-hover mb-0">
                 <thead className="table-light">
                   <tr>
-                    <th>Billing ID</th>
                     <th>Invoice ID</th>
                     <th>Items</th>
                     <th>Total Amount</th>
+                    <th>Refunded Amount</th>
+                    <th>Net Total</th>
+                    <th>Payment Status</th>
+                    <th>Refund Status</th>
                     <th>Date</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -142,20 +150,11 @@ const BillingHistory: React.FC = () => {
                     <tr key={entry.id} className="align-middle">
                       <td>
                         <code
-                          className="small text-primary"
+                          className="small"
                           title={entry.id}
                           aria-label={entry.id}
                         >
-                          {entry.id.substring(0, 12)}...
-                        </code>
-                      </td>
-                      <td>
-                        <code
-                          className="small"
-                          title={entry.invoiceId}
-                          aria-label={entry.invoiceId}
-                        >
-                          {entry.invoiceId.substring(0, 16)}...
+                          {entry.id.substring(0, 16)}...
                         </code>
                       </td>
                       <td>
@@ -166,10 +165,33 @@ const BillingHistory: React.FC = () => {
                       <td>
                         <strong>₹{(entry.total || 0).toFixed(2)}</strong>
                       </td>
+                      <td>
+                        <strong>₹{(entry.refundTotal || 0).toFixed(2)}</strong>
+                      </td>
+                      <td>
+                        <strong>₹{((entry.total || 0) - (entry.refundTotal || 0)).toFixed(2)}</strong>
+                      </td>
+                      <td>
+                        <span className={`badge bg-${entry?.paymentStatus === 'paid' ? 'success' :  'warning' }`}>
+                          {entry?.paymentStatus || 'none'}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`badge bg-${entry.refundStatus === 'full' ? 'danger' : entry.refundStatus === 'partial' ? 'warning' : 'success'}`}>
+                          {entry.refundStatus || 'none'}
+                        </span>
+                      </td>
                       <td className="text-muted small">
-                        {entry.createdAt
-                          ? new Date(entry.createdAt).toLocaleString()
+                        {entry.createdDate || entry.date
+                          ? new Date(entry.createdDate || entry.date).toLocaleString()
                           : 'N/A'}
+                      </td>
+                      <td>
+                        {entry.paymentStatus === 'paid' && entry.refundStatus !== 'full' && (
+                            <button className="btn btn-sm btn-outline-primary" onClick={() => openRefundModal(entry)}>
+                                Refund
+                            </button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -224,6 +246,12 @@ const BillingHistory: React.FC = () => {
           </div>
         )}
       </div>
+      <RefundModal
+        isOpen={isRefundModalOpen}
+        onClose={closeRefundModal}
+        invoice={selectedInvoice}
+        onRefundSuccess={fetchBillingHistory}
+      />
     </div>
   );
 };

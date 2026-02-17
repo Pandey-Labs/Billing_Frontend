@@ -68,15 +68,19 @@ email?: string
 
 
 export interface Invoice {
-id: string
-items: CartItem[]
-subtotal: number
-tax: number
-discount: number
-total: number
-customer?: Customer | null
-paymentMethod?: string
-date: string
-createdDate?: string
-createdTime?: string
+  id: string
+  items: CartItem[]
+  subtotal: number
+  tax: number
+  discount: number
+  total: number
+  customer?: Customer | null
+  customerId?: string
+  paymentMethod?: string
+  date: string
+  createdDate?: string
+  createdTime?: string
+  refundTotal?: number
+  refundStatus?: 'none' | 'partial' | 'full'
+  status?: string
 }

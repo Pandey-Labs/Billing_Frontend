@@ -421,5 +421,18 @@ export const getBillingHistory = async (options) => {
   });
 };
 
+/**
+ * Create a refund for an invoice
+ * @param {any} payload
+ * @param {{ token?: string }} [options]
+ */
+export const createRefund = async (payload, options) => {
+  return request('/api/refunds', {
+    method: 'POST',
+    body: payload,
+    ...(options || {}),
+  });
+};
+
 export { ApiError };
 

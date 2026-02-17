@@ -5,6 +5,8 @@ import cartReducer from '../slices/cartSlice'
 import customersReducer from '../slices/customersSlice'
 import reportsReducer from '../slices/reportsSlice'
 import settingsReducer from '../slices/settingsSlice';
+import refundsReducer from '../slices/refundsSlice';
+
 
 
 const store = configureStore({
@@ -15,6 +17,7 @@ const store = configureStore({
         customers: customersReducer,
         reports: reportsReducer,
         settings: settingsReducer,
+        refunds: refundsReducer,
     },
 })
 
