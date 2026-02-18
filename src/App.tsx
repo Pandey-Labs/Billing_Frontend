@@ -22,6 +22,7 @@ const Reports = lazy(() => import("./pages/Reports"));
 const Settings = lazy(() => import("./pages/Settings"));
 const Admin = lazy(() => import("./pages/Admin"));
 const BillingHistory = lazy(() => import("./pages/BillingHistory"));
+const Profile = lazy(() => import("./pages/Profile"));
 
 /* =======================
    SIDEBAR CONTEXT
@@ -87,6 +88,7 @@ const App: React.FC = () => {
                     <Route path="/billing-history" element={<BillingHistory />} />
 
                     <Route path="/reports" element={<Reports />} />
+                    <Route path="/profile" element={<Profile />} />
                     <Route path="/settings" element={<Settings />} />
                     <Route path="/admin" element={<Admin />} />
                   </Route>

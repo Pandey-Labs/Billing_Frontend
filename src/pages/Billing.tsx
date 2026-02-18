@@ -14,15 +14,17 @@ import { deductStock } from "../slices/productsSlice";
 import { setCustomers } from "../slices/customersSlice";
 import { useAppSelector } from "../store/hooks";
 import type { RootState } from "../store/store";
-import type { Customer, Product, Invoice } from "../types";
+import type { Customer, Product } from "../types";
 import {
   getCustomers,
   createCustomer,
   getProductByBarcode,
   createInvoice,
+  getMyProfile,
   ApiError,
 } from "../api/api.js";
 import ApiErrorFallback from "../components/ApiErrorFallback";
+import PaymentMethodModal from "../components/PaymentMethodModal";
 
 interface RazorpayOptions {
   key: string;
@@ -91,6 +93,7 @@ const Billing: React.FC = () => {
     typeof window !== "undefined" ? window.innerWidth < 992 : false
   );
   const [processingPayment, setProcessingPayment] = useState(false);
+  const [dbRazorpayKeyId, setDbRazorpayKeyId] = useState<string>("");
   const [loadingCustomers, setLoadingCustomers] = useState(false);
   const [apiCustomers, setApiCustomers] = useState<Customer[]>([]);
   const [customerApiError, setCustomerApiError] = useState<string | null>(null);
@@ -101,6 +104,31 @@ const Billing: React.FC = () => {
   const paymentGatewayEnabled = useAppSelector(
     (state: RootState) => state.settings.paymentGatewayEnabled
   );
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'cash' | 'card' | 'online' | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    const loadRazorpayKey = async () => {
+      if (!token) {
+        if (mounted) setDbRazorpayKeyId("");
+        return;
+      }
+      try {
+        const res = await getMyProfile({ token });
+        if (!mounted) return;
+        const key = String(res?.user?.razorpayKeyId || "");
+        setDbRazorpayKeyId(key);
+      } catch (e) {
+        if (!mounted) return;
+        setDbRazorpayKeyId("");
+      }
+    };
+    loadRazorpayKey();
+    return () => {
+      mounted = false;
+    };
+  }, [token]);
 
   // Fetch customers from API on mount
   const fetchCustomers = async () => {
@@ -381,7 +409,7 @@ const Billing: React.FC = () => {
       document.body.appendChild(script);
     });
 
-  const finalizeCheckout = async () => {
+  const finalizeCheckout = async (paymentMethod: 'cash' | 'card' | 'online') => {
     if (cart.items.length === 0) return;
     const now = new Date();
     const invoiceId = now.getTime().toString();
@@ -396,44 +424,44 @@ const Billing: React.FC = () => {
       tax,
       total,
       customer: selectedCustomer || null,
+      paymentMethod,
+      paymentStatus: 'paid',
+      transactionId: `TXN-${Date.now()}`,
     };
 
     // Persist invoice to backend so DB stock is decremented there.
     try {
-      const { data } = await fetch('/api/invoices', {
+      const response = await fetch('/api/invoices', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify(invoice),
-      }).then((r) => r.json());
+      });
 
-      // If backend succeeded, update local store
-      if (data && data.invoice) {
-        dispatch(addSale(data.invoice));
-        printInvoice(data.invoice);
-        // Update local product stock to match backend
-        if (cart.items && cart.items.length > 0) {
-          dispatch(
-            deductStock(cart.items.map((i) => ({ productId: i.productId, qty: i.qty })))
-          );
-        }
-        dispatch(clearCart());
-        toast.success('Invoice created successfully');
-        return;
+      if (!response.ok) {
+        const errBody = await response.json().catch(() => ({}));
+        throw new Error(errBody.message || `Server responded with ${response.status}`);
       }
-    } catch (e) {
-      console.warn('[Billing] Failed to persist invoice to backend, falling back to local update', e);
-    }
 
-    // Fallback: local-only invoice (offline or backend failed)
-    dispatch(addSale(invoice));
-    printInvoice(invoice);
-    dispatch(
-      deductStock(
-        cart.items.map((i) => ({ productId: i.productId, qty: i.qty }))
-      )
-    );
-    dispatch(clearCart());
-    toast.success('Invoice created successfully');
+      const result = await response.json();
+      const savedInvoice = result.invoice || invoice;
+
+      // Backend persisted invoice and decremented DB stock — update UI to match
+      dispatch(addSale(savedInvoice));
+      dispatch(
+        deductStock(cart.items.map((i) => ({ productId: i.productId, qty: i.qty })))
+      );
+      dispatch(clearCart());
+      toast.success('Payment completed successfully');
+      return;
+    } catch (e) {
+      console.error('[Billing] Failed to persist invoice to backend:', e);
+      toast.error('Failed to create invoice. Please check your connection and try again.');
+      // Don't proceed with local-only invoice as it creates stock inconsistency
+      return;
+    }
   };
 
   const handleCheckout = async () => {
@@ -457,15 +485,14 @@ const Billing: React.FC = () => {
 
     // Get settings from Redux
 
-    const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID;
+    const razorpayKey = dbRazorpayKeyId;
 
     // Check if payment gateway is disabled in settings
     if (!paymentGatewayEnabled) {
       console.log(
-        "Payment gateway disabled in settings. Creating invoice directly."
+        "Payment gateway disabled in settings. Showing payment method selection."
       );
-      toast.info("Creating invoice (payment gateway disabled in settings)");
-      finalizeCheckout();
+      setShowPaymentModal(true);
       return;
     }
 
@@ -473,12 +500,12 @@ const Billing: React.FC = () => {
     if (!razorpayKey) {
       console.warn("Razorpay not configured. Proceeding with direct checkout.");
       toast.info("Payment gateway not configured. Processing order directly.");
-      finalizeCheckout();
+      setShowPaymentModal(true);
       return;
     }
 
     if (total <= 0) {
-      finalizeCheckout();
+      setShowPaymentModal(true);
       return;
     }
 
@@ -557,7 +584,6 @@ const Billing: React.FC = () => {
           );
           dispatch(clearCart());
           dispatch(addSale(invoice));
-          printInvoice(invoice);
         } finally {
           setProcessingPayment(false);
         }
@@ -595,60 +621,15 @@ const Billing: React.FC = () => {
     }
   };
 
-  const printInvoice = (invoice: Invoice) => {
-    const win = window.open("", "PRINT", "height=600,width=800");
-    if (!win) return;
-    win.document.write(
-      "<html><head><title>Invoice #" + invoice.id + "</title>"
-    );
-    win.document.write("</head><body>");
-    win.document.write("<h2>Invoice #" + invoice.id + "</h2>");
-    win.document.write(
-      "<div>Date: " +
-        (invoice.date ? new Date(invoice.date).toLocaleString() : "") +
-        "</div>"
-    );
-    if (invoice.customer) {
-      win.document.write(
-        "<div>Customer: " +
-          invoice.customer.name +
-          (invoice.customer.phone ? " (" + invoice.customer.phone + ")" : "") +
-          (invoice.customer.email ? " (" + invoice.customer.email + ")" : "") +
-          "</div>"
-      );
-    }
-    win.document.write("<hr/>");
-    win.document.write(
-      '<table border="1" cellpadding="5" cellspacing="0" style="width:100%;border-collapse:collapse;">'
-    );
-    win.document.write(
-      "<thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Subtotal</th></tr></thead><tbody>"
-    );
-    invoice.items.forEach((item) => {
-      win.document.write("<tr>");
-      win.document.write("<td>" + item.name + "</td>");
-      win.document.write("<td>" + item.qty + "</td>");
-      win.document.write("<td>" + item.price + "</td>");
-      win.document.write("<td>" + (item.price * item.qty).toFixed(2) + "</td>");
-      win.document.write("</tr>");
-    });
-    win.document.write("</tbody></table>");
-    win.document.write("<hr/>");
-    win.document.write(
-      "<div>Subtotal: ₹" + invoice.subtotal.toFixed(2) + "</div>"
-    );
-    win.document.write(
-      "<div>Discount: -₹" + invoice.discount.toFixed(2) + "</div>"
-    );
-    win.document.write("<div>Tax: ₹" + invoice.tax.toFixed(2) + "</div>");
-    win.document.write(
-      "<div><b>Total: ₹" + invoice.total.toFixed(2) + "</b></div>"
-    );
-    win.document.write("</body></html>");
-    win.document.close();
-    win.focus();
-    win.print();
-    win.close();
+  const handlePaymentMethodSelect = async (method: 'cash' | 'card' | 'online') => {
+    setSelectedPaymentMethod(method);
+    setShowPaymentModal(false);
+    await finalizeCheckout(method);
+  };
+
+  const handlePaymentModalHide = () => {
+    setShowPaymentModal(false);
+    setSelectedPaymentMethod(null);
   };
 
   // Show error fallback if customer API failed and no customers available
@@ -1657,6 +1638,13 @@ const Billing: React.FC = () => {
           )}
         </Modal.Footer>
       </Modal>
+
+      <PaymentMethodModal
+        show={showPaymentModal}
+        onHide={handlePaymentModalHide}
+        onSelectPaymentMethod={handlePaymentMethodSelect}
+        processing={processingPayment}
+      />
     </div>
   );
 };

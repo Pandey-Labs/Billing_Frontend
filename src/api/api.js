@@ -206,6 +206,28 @@ export const register = async (payload) => {
   });
 };
 
+/**
+ * @param {{ token?: string; [key: string]: any }} [options]
+ */
+export const getMyProfile = async (options) => {
+  return request('/api/users/me', {
+    method: 'GET',
+    ...(options || {}),
+  });
+};
+
+/**
+ * @param {{ razorpayKeyId: string }} payload
+ * @param {{ token?: string; [key: string]: any }} [options]
+ */
+export const updateMyRazorpayKeyId = async (payload, options) => {
+  return request('/api/users/me/razorpay-key', {
+    method: 'PUT',
+    body: payload,
+    ...(options || {}),
+  });
+};
+
 
 /**
  * @param {{ token?: string; [key: string]: any }} [options]

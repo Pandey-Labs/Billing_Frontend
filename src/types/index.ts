@@ -77,6 +77,7 @@ export interface Invoice {
   customer?: Customer | null
   customerId?: string
   paymentMethod?: string
+  paymentStatus?: string
   date: string
   createdDate?: string
   createdTime?: string

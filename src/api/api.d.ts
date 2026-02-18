@@ -33,6 +33,15 @@ export declare function register(payload: {
   password?: string;
 }): Promise<{ token?: string; user?: any; [key: string]: any }>;
 
+export declare function getMyProfile(
+  options?: RequestInit & { token?: string },
+): Promise<{ user?: any; [key: string]: any }>;
+
+export declare function updateMyRazorpayKeyId(
+  payload: { razorpayKeyId: string },
+  options?: RequestInit & { token?: string },
+): Promise<{ user?: any; [key: string]: any }>;
+
 export declare function getProducts(
   options?: RequestInit & { token?: string },
 ): Promise<Product[]>;

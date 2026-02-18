@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Modal, Button } from 'react-bootstrap';
 import { useAppSelector } from '../store/hooks';
 import type { RootState } from '../store/store';
 import { getBillingHistory, ApiError } from '../api/api.js';
@@ -15,6 +16,8 @@ const BillingHistory: React.FC = () => {
   const itemsPerPage = 10;
   const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [viewInvoice, setViewInvoice] = useState<Invoice | null>(null);
 
   const openRefundModal = (invoice: Invoice) => {
     setSelectedInvoice(invoice);
@@ -24,6 +27,16 @@ const BillingHistory: React.FC = () => {
   const closeRefundModal = () => {
     setSelectedInvoice(null);
     setIsRefundModalOpen(false);
+  };
+
+  const openViewModal = (invoice: Invoice) => {
+    setViewInvoice(invoice);
+    setIsViewModalOpen(true);
+  };
+
+  const closeViewModal = () => {
+    setIsViewModalOpen(false);
+    setViewInvoice(null);
   };
 
   const fetchBillingHistory = async () => {
@@ -187,11 +200,22 @@ const BillingHistory: React.FC = () => {
                           : 'N/A'}
                       </td>
                       <td>
+                        <div className="d-flex gap-2 flex-wrap">
+                          <button
+                            className="btn btn-sm btn-outline-secondary"
+                            onClick={() => openViewModal(entry)}
+                          >
+                            View
+                          </button>
                         {entry.paymentStatus === 'paid' && entry.refundStatus !== 'full' && (
-                            <button className="btn btn-sm btn-outline-primary" onClick={() => openRefundModal(entry)}>
-                                Refund
-                            </button>
+                          <button
+                            className="btn btn-sm btn-outline-danger"
+                            onClick={() => openRefundModal(entry)}
+                          >
+                            Refund
+                          </button>
                         )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -252,6 +276,84 @@ const BillingHistory: React.FC = () => {
         invoice={selectedInvoice}
         onRefundSuccess={fetchBillingHistory}
       />
+
+      <Modal
+        show={isViewModalOpen}
+        onHide={closeViewModal}
+        centered
+        size="lg"
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Purchased Items</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <div className="mb-2">
+            <div className="text-muted small">Invoice ID</div>
+            <div className="fw-semibold">{viewInvoice?.id || '-'}</div>
+          </div>
+
+          <div className="table-responsive">
+            <table className="table table-sm mb-0">
+              <thead className="table-light">
+                <tr>
+                  <th>Item</th>
+                  <th className="text-end">Qty</th>
+                  <th className="text-end">Price</th>
+                  <th className="text-end">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(viewInvoice?.items || []).length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="text-center text-muted py-3">
+                      No items
+                    </td>
+                  </tr>
+                ) : (
+                  (viewInvoice?.items || []).map((it: any, idx: number) => (
+                    <tr key={String(it?.id || it?.productId || idx)}>
+                      <td>{it?.name || '-'}</td>
+                      <td className="text-end">{Number(it?.qty || 0)}</td>
+                      <td className="text-end">₹{Number(it?.price || 0).toFixed(2)}</td>
+                      <td className="text-end">
+                        ₹{(Number(it?.qty || 0) * Number(it?.price || 0)).toFixed(2)}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <hr />
+
+          <div className="d-flex justify-content-end">
+            <div style={{ minWidth: 260 }}>
+              <div className="d-flex justify-content-between">
+                <span className="text-muted">Subtotal</span>
+                <span className="fw-semibold">₹{Number(viewInvoice?.subtotal || 0).toFixed(2)}</span>
+              </div>
+              <div className="d-flex justify-content-between">
+                <span className="text-muted">Discount</span>
+                <span className="fw-semibold">-₹{Number(viewInvoice?.discount || 0).toFixed(2)}</span>
+              </div>
+              <div className="d-flex justify-content-between">
+                <span className="text-muted">Tax</span>
+                <span className="fw-semibold">₹{Number(viewInvoice?.tax || 0).toFixed(2)}</span>
+              </div>
+              <div className="d-flex justify-content-between mt-2">
+                <span className="fw-bold">Total</span>
+                <span className="fw-bold">₹{Number(viewInvoice?.total || 0).toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={closeViewModal}>
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 };
