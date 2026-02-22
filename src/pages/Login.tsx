@@ -11,9 +11,9 @@ import INDIA_CITIES from '../data/indiaCities'
 
 
 const roleMap: Record<string, User['role']> = {
-    admin: 'Admin',
-    cashier: 'Cashier',
-    manager: 'Manager',
+    admin: 'admin',
+    staffadmin: 'staffAdmin',
+    staff: 'staff',
 }
 
 const Login: React.FC = () => {
@@ -36,6 +36,7 @@ const Login: React.FC = () => {
     const [loading, setLoading] = useState(false)
     const [showPassword, setShowPassword] = useState(false)
     const [showRegPassword, setShowRegPassword] = useState(false)
+    const [loginAsStaff, setLoginAsStaff] = useState(false)
     const dispatch = useAppDispatch()
     const nav = useNavigate()
     const user = useAppSelector(s => s.auth.user)
@@ -85,15 +86,16 @@ const Login: React.FC = () => {
         setApiError(null)
         setLoading(true)
         try {
-            const response = await loginApi({ companyName: companyVal, email: emailVal, password })
+            const response = await loginApi({ companyName: companyVal, email: emailVal, password, loginAsStaff })
             if (!response || typeof response !== 'object' || !response.user || !response.token) {
                 throw new Error('Invalid server response')
             }
-            const mappedRole = roleMap[String(response?.user?.role || '').toLowerCase()] || 'Cashier'
+            const mappedRole = roleMap[String(response?.user?.role || '').toLowerCase()] || 'staff'
             const user: User = {
                 id: response?.user?.id ?? response?.user?.email ?? 'unknown',
                 username: response?.user?.name ?? response?.user?.email ?? 'User',
                 role: mappedRole,
+                permissions: Array.isArray(response?.user?.permissions) ? response.user.permissions : [],
                 email: response?.user?.email ?? undefined,
                 name: response?.user?.name ?? undefined,
             }
@@ -242,6 +244,20 @@ const Login: React.FC = () => {
                                                 <button type="button" className="btn btn-outline-secondary" onClick={() => setShowPassword(s => !s)} aria-label={showPassword ? 'Hide password' : 'Show password'}>
                                                     <i className={showPassword ? 'bi bi-eye-slash' : 'bi bi-eye'}></i>
                                                 </button>
+                                            </div>
+                                        </div>
+                                        <div className="mb-3">
+                                            <div className="form-check">
+                                                <input
+                                                    className="form-check-input"
+                                                    type="checkbox"
+                                                    id="loginAsStaff"
+                                                    checked={loginAsStaff}
+                                                    onChange={e => setLoginAsStaff(e.target.checked)}
+                                                />
+                                                <label className="form-check-label" htmlFor="loginAsStaff">
+                                                    Login as Staff
+                                                </label>
                                             </div>
                                         </div>
                                         <div className="mb-3">

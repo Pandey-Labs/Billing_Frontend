@@ -69,6 +69,22 @@ class ApiError extends Error {
 }
 
 /**
+ * Get the current authentication token from localStorage
+ */
+const getAuthToken = () => {
+  try {
+    const auth = localStorage.getItem('auth');
+    if (auth) {
+      const parsed = JSON.parse(auth);
+      return parsed.token || null;
+    }
+  } catch (e) {
+    // ignore
+  }
+  return null;
+};
+
+/**
  * @param {string} path
  */
 const handleUnauthorized = (path) => {
@@ -142,6 +158,17 @@ const request = async (path, options = {}) => {
 
     const payload = response && response.data !== undefined ? response.data : null;
 
+    // Some endpoints may return 2xx with an { error: string } payload.
+    // Normalize this into an ApiError so callers can handle it consistently.
+    if (
+      payload &&
+      typeof payload === 'object' &&
+      typeof payload.error === 'string' &&
+      payload.error.trim()
+    ) {
+      throw new ApiError(payload.error, response.status, payload);
+    }
+
     return payload;
   } catch (err) {
     /** @type {any} */
@@ -161,12 +188,13 @@ const request = async (path, options = {}) => {
 };
 
 /**
- * @param {{ companyName: string; email: string; password: string }} credentials
+ * @param {{ companyName: string; email: string; password: string; loginAsStaff?: boolean }} credentials
  */
 export const login = async (credentials) => {
   const companyName = String(credentials.companyName || '').trim();
   const email = String(credentials.email || '').trim();
   const password = String(credentials.password || '');
+  const { loginAsStaff = false } = credentials;
 
   if (!companyName) {
     throw new ApiError('Company name is required', 400);
@@ -190,6 +218,7 @@ export const login = async (credentials) => {
       companyName,
       email,
       password,
+      loginAsStaff,
     },
   });
 };
@@ -226,6 +255,94 @@ export const updateMyRazorpayKeyId = async (payload, options) => {
     body: payload,
     ...(options || {}),
   });
+};
+
+/**
+ * @param {{ token?: string; [key: string]: any }} [options]
+ */
+export const getStaffUsers = async (options) => {
+  return request('/api/users/staff', {
+    method: 'GET',
+    token: getAuthToken(),
+    ...(options || {}),
+  });
+};
+
+/**
+ * @param {{ name: string; email: string; password: string; role: string; permissions?: string[] }} payload
+ * @param {{ token?: string; [key: string]: any }} [options]
+ */
+export const createStaffUser = async (payload, options) => {
+  return request('/api/users/staff', {
+    method: 'POST',
+    body: payload,
+    token: getAuthToken(),
+    ...(options || {}),
+  });
+};
+
+/**
+ * @param {string} id
+ * @param {{ name?: string; email?: string; role?: string; permissions?: string[] }} payload
+ * @param {{ token?: string; [key: string]: any }} [options]
+ */
+export const updateStaffUser = async (id, payload, options) => {
+  console.log('API: updateStaffUser called with:', { id, payload });
+  try {
+    const result = await request(`/api/users/staff/${id}`, {
+      method: 'PUT',
+      body: payload,
+      token: getAuthToken(),
+      ...(options || {}),
+    });
+    console.log('API: updateStaffUser success:', result);
+    return result;
+  } catch (error) {
+    console.error('API: updateStaffUser error:', error);
+    throw error;
+  }
+};
+
+/**
+ * @param {string} id
+ * @param {{ token?: string; [key: string]: any }} [options]
+ */
+export const deleteStaffUser = async (id, options) => {
+  console.log('API: deleteStaffUser called with:', { id });
+  try {
+    const result = await request(`/api/users/staff/${id}`, {
+      method: 'DELETE',
+      token: getAuthToken(),
+      ...(options || {}),
+    });
+    console.log('API: deleteStaffUser success:', result);
+    return result;
+  } catch (error) {
+    console.error('API: deleteStaffUser error:', error);
+    throw error;
+  }
+};
+
+/**
+ * @param {string} id
+ * @param {'active' | 'inactive'} status
+ * @param {{ token?: string; [key: string]: any }} [options]
+ */
+export const toggleStaffStatus = async (id, status, options) => {
+  console.log('API: toggleStaffStatus called with:', { id, status });
+  try {
+    const result = await request(`/api/users/staff/${id}/status`, {
+      method: 'PATCH',
+      body: { status },
+      token: getAuthToken(),
+      ...(options || {}),
+    });
+    console.log('API: toggleStaffStatus success:', result);
+    return result;
+  } catch (error) {
+    console.error('API: toggleStaffStatus error:', error);
+    throw error;
+  }
 };
 
 

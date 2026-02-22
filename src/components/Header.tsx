@@ -13,6 +13,14 @@ const Header: React.FC = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  const roleLabel = (() => {
+    const role = String(user?.role || '').toLowerCase();
+    if (role === 'admin') return 'Admin';
+    if (role === 'staffadmin') return 'Staff Admin';
+    if (role === 'staff') return 'Staff';
+    return 'User';
+  })();
+
   const handleLogout = () => {
     dispatch(logout());
     toast.info('Logged out successfully');
@@ -118,7 +126,7 @@ const Header: React.FC = () => {
                   {user?.name || user?.username || 'Admin'}
                 </div>
                 <div className="text-muted" style={{ fontSize: '0.75rem', lineHeight: '1.2' }}>
-                  {user?.role || 'Administrator'}
+                  {roleLabel}
                 </div>
               </div>
               <i className="bi bi-chevron-down d-none d-md-block text-muted"></i>
