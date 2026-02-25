@@ -86,7 +86,7 @@ const Login: React.FC = () => {
         setApiError(null)
         setLoading(true)
         try {
-            const response = await loginApi({ companyName: companyVal, email: emailVal, password, loginAsStaff })
+            const response = await loginApi({ companyName: companyVal, email: emailVal, password })
             if (!response || typeof response !== 'object' || !response.user || !response.token) {
                 throw new Error('Invalid server response')
             }
@@ -95,7 +95,6 @@ const Login: React.FC = () => {
                 id: response?.user?.id ?? response?.user?.email ?? 'unknown',
                 username: response?.user?.name ?? response?.user?.email ?? 'User',
                 role: mappedRole,
-                permissions: Array.isArray(response?.user?.permissions) ? response.user.permissions : [],
                 email: response?.user?.email ?? undefined,
                 name: response?.user?.name ?? undefined,
             }

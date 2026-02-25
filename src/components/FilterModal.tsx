@@ -13,7 +13,6 @@ interface FilterModalProps {
     paymentMethodFilter: string
     setPaymentMethodFilter: (method: string) => void
     uniquePaymentMethods: string[]
-    onApplyFilters: () => void
     onResetFilters: () => void
 }
 
@@ -29,14 +28,8 @@ const FilterModal: React.FC<FilterModalProps> = ({
     paymentMethodFilter,
     setPaymentMethodFilter,
     uniquePaymentMethods,
-    onApplyFilters,
     onResetFilters,
 }) => {
-    const handleApply = () => {
-        onApplyFilters()
-        onHide()
-    }
-
     const handleReset = () => {
         onResetFilters()
         onHide()

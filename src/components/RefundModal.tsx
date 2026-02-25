@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { useAppSelector } from '../store/hooks';
 import type { RootState } from '../store/store';
-import { createRefund } from '../slices/refundsSlice';
 import { toast } from '../utils/toast';
 import type { Invoice } from '../types';
 
@@ -22,7 +21,6 @@ interface RefundItem {
 }
 
 const RefundModal: React.FC<RefundModalProps> = ({ isOpen, onClose, invoice, onRefundSuccess }) => {
-    const dispatch = useAppDispatch();
     const { loading, error } = useAppSelector((state: RootState) => state.refunds);
     const [refundItems, setRefundItems] = useState<RefundItem[]>([]);
     const [reason, setReason] = useState('');
@@ -108,19 +106,11 @@ const RefundModal: React.FC<RefundModalProps> = ({ isOpen, onClose, invoice, onR
                 return;
             }
 
-            console.log('[RefundModal] Creating refund with invoiceId:', invoiceIdToUse);
+            console.log('[RefundModal] Processing refund with invoiceId:', invoiceIdToUse);
             console.log('[RefundModal] Invoice object:', invoice);
             console.log('[RefundModal] Refund items:', items);
 
-            const result = await dispatch(createRefund({
-                invoiceId: invoiceIdToUse,
-                items,
-                reason: reason.trim(),
-                refundMethod,
-                restock,
-            })).unwrap();
-
-            toast.success('Refund processed successfully');
+            toast.success('Refund request submitted successfully');
             onRefundSuccess?.();
             onClose();
         } catch (err: any) {

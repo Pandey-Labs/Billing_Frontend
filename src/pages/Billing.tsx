@@ -105,7 +105,7 @@ const Billing: React.FC = () => {
     (state: RootState) => state.settings.paymentGatewayEnabled
   );
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  
+
   useEffect(() => {
     let mounted = true;
     const loadRazorpayKey = async () => {
@@ -251,8 +251,8 @@ const Billing: React.FC = () => {
       (prod.discountAmount || prod.discountValue
         ? "flat"
         : prod.discount || prod.discountPrice
-        ? "percentage"
-        : undefined);
+          ? "percentage"
+          : undefined);
     if (discountType === "flat") {
       const amount =
         Number(prod.discountAmount ?? prod.discountValue ?? 0) || 0;
@@ -275,22 +275,22 @@ const Billing: React.FC = () => {
       (prod.discountAmount || prod.discountValue
         ? "flat"
         : prod.discount || prod.discountPrice
-        ? "percentage"
-        : undefined);
+          ? "percentage"
+          : undefined);
     const discountPerUnit =
       discountType === "flat"
         ? Math.max(
-            Number(prod.discountAmount ?? prod.discountValue ?? 0) || 0,
-            0
-          )
+          Number(prod.discountAmount ?? prod.discountValue ?? 0) || 0,
+          0
+        )
         : (price *
-            Math.max(
-              Number(
-                prod.discount ?? prod.discountPrice ?? prod.discountValue ?? 0
-              ) || 0,
-              0
-            )) /
-          100;
+          Math.max(
+            Number(
+              prod.discount ?? prod.discountPrice ?? prod.discountValue ?? 0
+            ) || 0,
+            0
+          )) /
+        100;
     const priceAfterDiscount = Math.max(price - discountPerUnit, 0);
     const taxPercent = Number(prod.taxRate || prod.taxPercent) || 0;
     return sum + (taxPercent * priceAfterDiscount * qty) / 100;
@@ -629,14 +629,12 @@ const Billing: React.FC = () => {
   };
 
   const handlePaymentMethodSelect = async (method: 'cash' | 'card' | 'online') => {
-    setSelectedPaymentMethod(method);
     setShowPaymentModal(false);
     await finalizeCheckout(method);
   };
 
   const handlePaymentModalHide = () => {
     setShowPaymentModal(false);
-    setSelectedPaymentMethod(null);
   };
 
   // Show error fallback if customer API failed and no customers available
@@ -754,9 +752,8 @@ const Billing: React.FC = () => {
                     <i className="bi bi-upc-scan"></i>
                   </span>
                   <input
-                    className={`form-control glow-control ${
-                      barcodeError ? "is-invalid" : ""
-                    }`}
+                    className={`form-control glow-control ${barcodeError ? "is-invalid" : ""
+                      }`}
                     placeholder="Scan or enter barcode..."
                     value={barcodeInput}
                     onChange={(e) => {
@@ -985,9 +982,8 @@ const Billing: React.FC = () => {
             >
               <span className="d-flex align-items-center gap-2">
                 <i
-                  className={`bi ${
-                    selectedCustomer ? "bi-person-check-fill" : "bi-person"
-                  } ${selectedCustomer ? "" : "text-primary"}`}
+                  className={`bi ${selectedCustomer ? "bi-person-check-fill" : "bi-person"
+                    } ${selectedCustomer ? "" : "text-primary"}`}
                   style={{ fontSize: "1.2rem" }}
                 ></i>
                 Selected Customer
@@ -1247,9 +1243,8 @@ const Billing: React.FC = () => {
           <div className="d-flex gap-2 mb-4" role="group">
             <button
               type="button"
-              className={`btn flex-fill ${
-                modalMode === "select" ? "btn-primary" : "btn-outline-primary"
-              }`}
+              className={`btn flex-fill ${modalMode === "select" ? "btn-primary" : "btn-outline-primary"
+                }`}
               onClick={() => setModalMode("select")}
               style={{
                 transition: "all 0.3s ease",
@@ -1258,17 +1253,15 @@ const Billing: React.FC = () => {
               }}
             >
               <i
-                className={`bi ${
-                  modalMode === "select" ? "bi-check-circle-fill" : "bi-people"
-                } me-2`}
+                className={`bi ${modalMode === "select" ? "bi-check-circle-fill" : "bi-people"
+                  } me-2`}
               ></i>
               Existing Customer
             </button>
             <button
               type="button"
-              className={`btn flex-fill ${
-                modalMode === "create" ? "btn-primary" : "btn-outline-primary"
-              }`}
+              className={`btn flex-fill ${modalMode === "create" ? "btn-primary" : "btn-outline-primary"
+                }`}
               onClick={() => setModalMode("create")}
               style={{
                 transition: "all 0.3s ease",
@@ -1277,11 +1270,10 @@ const Billing: React.FC = () => {
               }}
             >
               <i
-                className={`bi ${
-                  modalMode === "create"
+                className={`bi ${modalMode === "create"
                     ? "bi-check-circle-fill"
                     : "bi-person-plus"
-                } me-2`}
+                  } me-2`}
               ></i>
               New Customer
             </button>
@@ -1289,9 +1281,8 @@ const Billing: React.FC = () => {
 
           {/* Select Customer Pane */}
           <div
-            className={`select-customer-pane ${
-              modalMode === "select" ? "active" : ""
-            }`}
+            className={`select-customer-pane ${modalMode === "select" ? "active" : ""
+              }`}
             style={{
               display: modalMode === "select" ? "block" : "none",
               animation:
@@ -1357,9 +1348,8 @@ const Billing: React.FC = () => {
                         toast.success(`Customer "${customer.name}" selected`);
                       }}
                       style={{
-                        animation: `fadeInUp 0.3s ease-out ${
-                          index * 0.05
-                        }s both`,
+                        animation: `fadeInUp 0.3s ease-out ${index * 0.05
+                          }s both`,
                         borderRadius: "8px",
                         marginBottom: "4px",
                         transition: "all 0.2s ease",
@@ -1404,9 +1394,8 @@ const Billing: React.FC = () => {
 
           {/* Create Customer Pane */}
           <div
-            className={`create-customer-pane ${
-              modalMode === "create" ? "active" : ""
-            }`}
+            className={`create-customer-pane ${modalMode === "create" ? "active" : ""
+              }`}
             style={{
               display: modalMode === "create" ? "block" : "none",
               animation:
@@ -1420,9 +1409,8 @@ const Billing: React.FC = () => {
                   Full Name <span style={{ color: "red" }}>*</span>
                 </label>
                 <input
-                  className={`form-control glow-control${
-                    customerErrors.name ? " is-invalid" : ""
-                  }`}
+                  className={`form-control glow-control${customerErrors.name ? " is-invalid" : ""
+                    }`}
                   name="name"
                   value={customerForm.name}
                   onChange={(e) =>
@@ -1452,9 +1440,8 @@ const Billing: React.FC = () => {
                   Email Address
                 </label>
                 <input
-                  className={`form-control glow-control${
-                    customerErrors.email ? " is-invalid" : ""
-                  }`}
+                  className={`form-control glow-control${customerErrors.email ? " is-invalid" : ""
+                    }`}
                   name="email"
                   type="email"
                   value={customerForm.email}
@@ -1485,9 +1472,8 @@ const Billing: React.FC = () => {
                   Phone Number
                 </label>
                 <input
-                  className={`form-control glow-control${
-                    customerErrors.phone ? " is-invalid" : ""
-                  }`}
+                  className={`form-control glow-control${customerErrors.phone ? " is-invalid" : ""
+                    }`}
                   name="phone"
                   value={customerForm.phone}
                   onChange={(e) =>

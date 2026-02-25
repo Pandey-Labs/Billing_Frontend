@@ -170,11 +170,6 @@ const Reports: React.FC = () => {
     }, [filteredSales])
 
     // Filter functions
-    const handleApplyFilters = () => {
-        // Filters are already applied through state updates
-        toast.success('Filters applied successfully')
-    }
-
     const handleResetFilters = () => {
         setDateFilter('all')
         setStartDate('')
@@ -589,7 +584,6 @@ const Reports: React.FC = () => {
                 paymentMethodFilter={paymentMethodFilter}
                 setPaymentMethodFilter={setPaymentMethodFilter}
                 uniquePaymentMethods={uniquePaymentMethods}
-                onApplyFilters={handleApplyFilters}
                 onResetFilters={handleResetFilters}
             />
         </div>

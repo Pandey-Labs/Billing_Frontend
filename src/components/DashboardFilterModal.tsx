@@ -12,7 +12,6 @@ interface DashboardFilterModalProps {
     setStartDate: (date: string) => void
     endDate: string
     setEndDate: (date: string) => void
-    onApplyFilters: () => void
     onResetFilters: () => void
 }
 
@@ -30,14 +29,8 @@ const DashboardFilterModal: React.FC<DashboardFilterModalProps> = ({
     setStartDate,
     endDate,
     setEndDate,
-    onApplyFilters,
     onResetFilters,
 }) => {
-    const handleApply = () => {
-        onApplyFilters()
-        onHide()
-    }
-
     const handleReset = () => {
         onResetFilters()
         onHide()

@@ -21,7 +21,6 @@ const Billing = lazy(() => import("./pages/Billing"));
 const Invoice = lazy(() => import("./pages/Invoice"));
 const Reports = lazy(() => import("./pages/Reports"));
 const Settings = lazy(() => import("./pages/Settings"));
-const Admin = lazy(() => import("./pages/Admin"));
 const BillingHistory = lazy(() => import("./pages/BillingHistory"));
 const Profile = lazy(() => import("./pages/Profile"));
 const StaffForm = lazy(() => import("./pages/StaffForm"));

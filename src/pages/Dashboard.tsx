@@ -175,10 +175,6 @@ const Dashboard: React.FC = () => {
    [filteredSales]);
 
   // Filter functions
-  const handleApplyFilters = () => {
-    toast.success('Dashboard filters applied successfully')
-  }
-
   const handleResetFilters = () => {
     setDateFilter('Today')
     setPaymentFilter('All')
@@ -610,7 +606,6 @@ const Dashboard: React.FC = () => {
         setStartDate={setStartDate}
         endDate={endDate}
         setEndDate={setEndDate}
-        onApplyFilters={handleApplyFilters}
         onResetFilters={handleResetFilters}
       />
     </div>
