@@ -1,26 +1,43 @@
 import React, { useEffect, useState } from 'react';
+import { Modal, Button } from 'react-bootstrap';
 import { useAppSelector } from '../store/hooks';
 import type { RootState } from '../store/store';
 import { getBillingHistory, ApiError } from '../api/api.js';
 import { toast } from '../utils/toast';
-
-interface BillingHistoryItem {
-  id: string;
-  invoiceId: string;
-  orgId?: string;
-  items: Array<any>;
-  total: number;
-  createdAt: string;
-  meta?: Record<string, unknown>;
-}
+import RefundModal from '../components/RefundModal';
+import type { Invoice } from '../types';
 
 const BillingHistory: React.FC = () => {
   const token = useAppSelector((state: RootState) => state.auth.token) || undefined;
-  const [history, setHistory] = useState<BillingHistoryItem[]>([]);
+  const [history, setHistory] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [viewInvoice, setViewInvoice] = useState<Invoice | null>(null);
+
+  const openRefundModal = (invoice: Invoice) => {
+    setSelectedInvoice(invoice);
+    setIsRefundModalOpen(true);
+  };
+
+  const closeRefundModal = () => {
+    setSelectedInvoice(null);
+    setIsRefundModalOpen(false);
+  };
+
+  const openViewModal = (invoice: Invoice) => {
+    setViewInvoice(invoice);
+    setIsViewModalOpen(true);
+  };
+
+  const closeViewModal = () => {
+    setIsViewModalOpen(false);
+    setViewInvoice(null);
+  };
 
   const fetchBillingHistory = async () => {
     try {
@@ -130,11 +147,15 @@ const BillingHistory: React.FC = () => {
               <table className="table table-hover mb-0">
                 <thead className="table-light">
                   <tr>
-                    <th>Billing ID</th>
                     <th>Invoice ID</th>
                     <th>Items</th>
                     <th>Total Amount</th>
+                    <th>Refunded Amount</th>
+                    <th>Net Total</th>
+                    <th>Payment Status</th>
+                    <th>Refund Status</th>
                     <th>Date</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -142,20 +163,11 @@ const BillingHistory: React.FC = () => {
                     <tr key={entry.id} className="align-middle">
                       <td>
                         <code
-                          className="small text-primary"
+                          className="small"
                           title={entry.id}
                           aria-label={entry.id}
                         >
-                          {entry.id.substring(0, 12)}...
-                        </code>
-                      </td>
-                      <td>
-                        <code
-                          className="small"
-                          title={entry.invoiceId}
-                          aria-label={entry.invoiceId}
-                        >
-                          {entry.invoiceId.substring(0, 16)}...
+                          {entry.id.substring(0, 16)}...
                         </code>
                       </td>
                       <td>
@@ -166,10 +178,44 @@ const BillingHistory: React.FC = () => {
                       <td>
                         <strong>₹{(entry.total || 0).toFixed(2)}</strong>
                       </td>
+                      <td>
+                        <strong>₹{(entry.refundTotal || 0).toFixed(2)}</strong>
+                      </td>
+                      <td>
+                        <strong>₹{((entry.total || 0) - (entry.refundTotal || 0)).toFixed(2)}</strong>
+                      </td>
+                      <td>
+                        <span className={`badge bg-${entry?.paymentStatus === 'paid' ? 'success' :  'warning' }`}>
+                          {entry?.paymentStatus || 'none'}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`badge bg-${entry.refundStatus === 'full' ? 'danger' : entry.refundStatus === 'partial' ? 'warning' : 'success'}`}>
+                          {entry.refundStatus || 'none'}
+                        </span>
+                      </td>
                       <td className="text-muted small">
-                        {entry.createdAt
-                          ? new Date(entry.createdAt).toLocaleString()
+                        {entry.createdDate || entry.date
+                          ? new Date(entry.createdDate || entry.date).toLocaleString()
                           : 'N/A'}
+                      </td>
+                      <td>
+                        <div className="d-flex gap-2 flex-wrap">
+                          <button
+                            className="btn btn-sm btn-outline-secondary"
+                            onClick={() => openViewModal(entry)}
+                          >
+                            View
+                          </button>
+                        {entry.paymentStatus === 'paid' && entry.refundStatus !== 'full' && (
+                          <button
+                            className="btn btn-sm btn-outline-danger"
+                            onClick={() => openRefundModal(entry)}
+                          >
+                            Refund
+                          </button>
+                        )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -224,6 +270,90 @@ const BillingHistory: React.FC = () => {
           </div>
         )}
       </div>
+      <RefundModal
+        isOpen={isRefundModalOpen}
+        onClose={closeRefundModal}
+        invoice={selectedInvoice}
+        onRefundSuccess={fetchBillingHistory}
+      />
+
+      <Modal
+        show={isViewModalOpen}
+        onHide={closeViewModal}
+        centered
+        size="lg"
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Purchased Items</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <div className="mb-2">
+            <div className="text-muted small">Invoice ID</div>
+            <div className="fw-semibold">{viewInvoice?.id || '-'}</div>
+          </div>
+
+          <div className="table-responsive">
+            <table className="table table-sm mb-0">
+              <thead className="table-light">
+                <tr>
+                  <th>Item</th>
+                  <th className="text-end">Qty</th>
+                  <th className="text-end">Price</th>
+                  <th className="text-end">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(viewInvoice?.items || []).length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="text-center text-muted py-3">
+                      No items
+                    </td>
+                  </tr>
+                ) : (
+                  (viewInvoice?.items || []).map((it: any, idx: number) => (
+                    <tr key={String(it?.id || it?.productId || idx)}>
+                      <td>{it?.name || '-'}</td>
+                      <td className="text-end">{Number(it?.qty || 0)}</td>
+                      <td className="text-end">₹{Number(it?.price || 0).toFixed(2)}</td>
+                      <td className="text-end">
+                        ₹{(Number(it?.qty || 0) * Number(it?.price || 0)).toFixed(2)}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <hr />
+
+          <div className="d-flex justify-content-end">
+            <div style={{ minWidth: 260 }}>
+              <div className="d-flex justify-content-between">
+                <span className="text-muted">Subtotal</span>
+                <span className="fw-semibold">₹{Number(viewInvoice?.subtotal || 0).toFixed(2)}</span>
+              </div>
+              <div className="d-flex justify-content-between">
+                <span className="text-muted">Discount</span>
+                <span className="fw-semibold">-₹{Number(viewInvoice?.discount || 0).toFixed(2)}</span>
+              </div>
+              <div className="d-flex justify-content-between">
+                <span className="text-muted">Tax</span>
+                <span className="fw-semibold">₹{Number(viewInvoice?.tax || 0).toFixed(2)}</span>
+              </div>
+              <div className="d-flex justify-content-between mt-2">
+                <span className="fw-bold">Total</span>
+                <span className="fw-bold">₹{Number(viewInvoice?.total || 0).toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={closeViewModal}>
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 };

@@ -20,9 +20,8 @@ import { setSales } from "../slices/reportsSlice";
 import { fetchProducts } from "../slices/productsSlice";
 import { getDashboard, ApiError } from "../api/api.js";
 import ApiErrorFallback from "../components/ApiErrorFallback";
-
-const paymentModes = ["All", "Cash", "UPI", "Card", "Wallet"];
-const dateRanges = ["Today", "Yesterday", "Weekly", "Monthly", "Custom"];
+import DashboardFilterModal from "../components/DashboardFilterModal";
+import { toast } from "../utils/toast";
 
 const chartTypes = [
   { label: "Line", value: "line" },
@@ -39,6 +38,9 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [hasApiError, setHasApiError] = useState(false);
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
   const sales = useAppSelector((s) => s.reports.sales) ?? [];
   const products = useAppSelector((s) => s.products.items) ?? [];
   const token = useAppSelector((s) => s.auth.token) || undefined;
@@ -150,16 +152,36 @@ const Dashboard: React.FC = () => {
           (d) => (d.date || "").slice(0, 7) === todayStr.slice(0, 7)
         );
         break;
+      case "Custom":
+        if (startDate && endDate) {
+          filtered = filtered.filter((d) => {
+            const saleDate = (d.date || "").slice(0, 10);
+            return saleDate >= startDate && saleDate <= endDate;
+          });
+        }
+        break;
       default:
         break;
     }
     return filtered;
-  }, [sales, dateFilter, paymentFilter, todayStr, yesterdayStr]);
+  }, [sales, dateFilter, paymentFilter, todayStr, yesterdayStr, startDate, endDate]);
 
   const totalFilteredSales = useMemo(
     () => filteredSales.reduce((sum, d) => sum + (d.total || 0), 0),
-    [filteredSales]
-  );
+   [filteredSales]);
+
+  // Filter functions
+  const handleApplyFilters = () => {
+    toast.success('Dashboard filters applied successfully')
+  }
+
+  const handleResetFilters = () => {
+    setDateFilter('Today')
+    setPaymentFilter('All')
+    setStartDate('')
+    setEndDate('')
+    toast.success('Dashboard filters reset successfully')
+  }
 
   const chartData = useMemo(() => {
     const map = new Map<
@@ -421,28 +443,14 @@ const Dashboard: React.FC = () => {
               <i className="bi bi-box-arrow-right" style={{ fontSize: '1.2rem' }}></i>
             </Button>
             <div className="d-flex flex-column flex-md-row gap-3 filter-group">
-            <Form.Select
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-              className="glow-control"
+            <Button 
+              variant="outline-primary" 
+              className="glow-control d-flex align-items-center gap-2"
+              onClick={() => setShowFilterModal(true)}
             >
-              {dateRanges.map((range) => (
-                <option key={range} value={range}>
-                  {range}
-                </option>
-              ))}
-            </Form.Select>
-            <Form.Select
-              value={paymentFilter}
-              onChange={(e) => setPaymentFilter(e.target.value)}
-              className="glow-control"
-            >
-              {paymentModes.map((mode) => (
-                <option key={mode} value={mode}>
-                  {mode}
-                </option>
-              ))}
-            </Form.Select>
+              <i className="bi bi-funnel"></i>
+              Filter
+            </Button>
             <Form.Select
               value={chartType}
               onChange={(e) => setChartType(e.target.value as ChartType)}
@@ -585,6 +593,22 @@ const Dashboard: React.FC = () => {
           </Card>
         </Col>
       </Row> */}
+      
+      {/* Dashboard Filter Modal */}
+      <DashboardFilterModal
+        show={showFilterModal}
+        onHide={() => setShowFilterModal(false)}
+        dateFilter={dateFilter}
+        setDateFilter={setDateFilter}
+        paymentFilter={paymentFilter}
+        setPaymentFilter={setPaymentFilter}
+        startDate={startDate}
+        setStartDate={setStartDate}
+        endDate={endDate}
+        setEndDate={setEndDate}
+        onApplyFilters={handleApplyFilters}
+        onResetFilters={handleResetFilters}
+      />
     </div>
   );
 };

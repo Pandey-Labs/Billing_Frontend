@@ -1,10 +1,11 @@
-export type Role = 'Admin' | 'Cashier' | 'Manager'
+export type Role = 'admin' | 'staffAdmin' | 'staff'
 
 
 export interface User {
 id: string
 username: string
 role: Role
+permissions?: string[]
 email?: string
 name?: string
 }
@@ -68,15 +69,28 @@ email?: string
 
 
 export interface Invoice {
-id: string
-items: CartItem[]
-subtotal: number
-tax: number
-discount: number
-total: number
-customer?: Customer | null
-paymentMethod?: string
-date: string
-createdDate?: string
-createdTime?: string
+  id: string
+  items: CartItem[]
+  subtotal: number
+  tax: number
+  discount: number
+  total: number
+  customer?: Customer | null
+  customerId?: string
+  paymentMethod?: string
+  paymentStatus?: string
+  date: string
+  createdDate?: string
+  createdTime?: string
+  refundTotal?: number
+  refundStatus?: 'none' | 'partial' | 'full'
+  status?: string
+}
+
+// Enhanced Invoice type for reports with profit calculations
+export interface EnhancedInvoice extends Invoice {
+  refund: number
+  netTotal: number
+  profit: number
+  status: 'completed' | 'refunded' | 'partial_refund' | 'cancelled'
 }

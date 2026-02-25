@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
+import { useAppSelector } from '../store/hooks';
+import type { RootState } from '../store/store';
 import {
   House,
   BoxSeam,
   ListColumns,
   Cart4,
   People,
+  PeopleFill,
   GraphUp,
   Gear,
   BoxArrowRight
@@ -19,18 +22,20 @@ type NavItem = {
   to: string;
   label: string;
   Icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  permissionKey?: string;
 };
 
 const NAV_ITEMS: NavItem[] = [
-  { to: '/dashboard', label: 'Dashboard', Icon: House },
-  { to: '/products', label: 'Products', Icon: BoxSeam },
-  { to: '/inventory', label: 'Inventory', Icon: ListColumns },
-  { to: '/billing', label: 'Billing', Icon: Cart4 },
-  { to: '/billing-history', label: 'Billing History', Icon: ListColumns },
-  { to: '/customers', label: 'Customers', Icon: People },
-  { to: '/reports', label: 'Reports', Icon: GraphUp },
-  { to: '/settings', label: 'Settings', Icon: Gear },
-  { to: '/admin', label: 'Admin', Icon: Gear },
+  { to: '/dashboard', label: 'Dashboard', Icon: House, permissionKey: 'dashboard' },
+  { to: '/products', label: 'Products', Icon: BoxSeam, permissionKey: 'products' },
+  { to: '/inventory', label: 'Inventory', Icon: ListColumns, permissionKey: 'products' },
+  { to: '/billing', label: 'Billing', Icon: Cart4, permissionKey: 'billing' },
+  { to: '/billing-history', label: 'Billing History', Icon: ListColumns, permissionKey: 'billing' },
+  { to: '/customers', label: 'Customers', Icon: People, permissionKey: 'customers' },
+  { to: '/reports', label: 'Reports', Icon: GraphUp, permissionKey: 'reports' },
+  { to: '/settings', label: 'Settings', Icon: Gear, permissionKey: 'settings' },
+  // { to: '/admin', label: 'Admin', Icon: Gear, permissionKey: 'admin' },
+  { to: '/admin/staff', label: 'Staff Management', Icon: PeopleFill, permissionKey: 'admin' },
 ];
 
 
@@ -40,6 +45,21 @@ const Sidebar: React.FC<{ onSidebarClassChange?: (c: string) => void }> = ({ onS
   const isExpanded = !collapsed || hovered;
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const user = useAppSelector((s: RootState) => s.auth.user);
+
+  const role = String(user?.role || '').toLowerCase();
+  const permissions = Array.isArray(user?.permissions) ? user!.permissions! : [];
+
+  const roleLabel = (() => {
+    if (role === 'admin') return 'Admin';
+    if (role === 'staffadmin') return 'Staff Admin';
+    if (role === 'staff') return 'Staff';
+    return 'User';
+  })();
+
+  const visibleItems = role === 'admin'
+    ? NAV_ITEMS
+    : NAV_ITEMS.filter((it) => !it.permissionKey || permissions.includes(it.permissionKey));
 
   // Sync with context if provided
   useEffect(() => {
@@ -62,7 +82,7 @@ const Sidebar: React.FC<{ onSidebarClassChange?: (c: string) => void }> = ({ onS
       onMouseLeave={() => setHovered(false)}
     >
       <nav className="nav flex-column mt-3 px-1" role="navigation">
-        {NAV_ITEMS.map(({ to, label, Icon }) => (
+        {visibleItems.map(({ to, label, Icon }) => (
           <NavLink
             key={to}
             to={to}
@@ -107,7 +127,7 @@ const Sidebar: React.FC<{ onSidebarClassChange?: (c: string) => void }> = ({ onS
         </button>
         {isExpanded && (
           <div className="small text-muted text-center mt-2">
-            Logged in as <strong>Admin</strong>
+            Logged in as <strong>{roleLabel}</strong>
         </div>
         )}
       </div>

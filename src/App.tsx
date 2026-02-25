@@ -6,6 +6,7 @@ import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import PageLoader from "./components/PageLoader";
+import RequirePermission from "./components/RequirePermission";
 
 /* =======================
    LAZY LOADED PAGES
@@ -22,6 +23,10 @@ const Reports = lazy(() => import("./pages/Reports"));
 const Settings = lazy(() => import("./pages/Settings"));
 const Admin = lazy(() => import("./pages/Admin"));
 const BillingHistory = lazy(() => import("./pages/BillingHistory"));
+const Profile = lazy(() => import("./pages/Profile"));
+const StaffForm = lazy(() => import("./pages/StaffForm"));
+const StaffManagement = lazy(() => import("./pages/StaffManagement"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 /* =======================
    SIDEBAR CONTEXT
@@ -71,25 +76,119 @@ const App: React.FC = () => {
                   <Route element={<ProtectedRoute />}>
                     <Route path="/dashboard" element={<Dashboard />} />
 
-                    <Route path="/products" element={<Products />} />
-                    <Route path="/products/new" element={<ProductForm />} />
-                    <Route path="/products/edit/:id" element={<ProductForm />} />
-
-                    <Route path="/customers" element={<Customers />} />
-                    <Route path="/customers/new" element={<CustomerForm />} />
                     <Route
-                      path="/customers/edit/:id"
-                      element={<CustomerForm />}
+                      path="/products"
+                      element={
+                        <RequirePermission permission="products">
+                          <Products />
+                        </RequirePermission>
+                      }
+                    />
+                    <Route
+                      path="/products/new"
+                      element={
+                        <RequirePermission permission="products">
+                          <ProductForm />
+                        </RequirePermission>
+                      }
+                    />
+                    <Route
+                      path="/products/edit/:id"
+                      element={
+                        <RequirePermission permission="products">
+                          <ProductForm />
+                        </RequirePermission>
+                      }
                     />
 
-                    <Route path="/billing" element={<Billing />} />
-                    <Route path="/invoice/:id" element={<Invoice />} />
-                    <Route path="/billing-history" element={<BillingHistory />} />
+                    <Route
+                      path="/customers"
+                      element={
+                        <RequirePermission permission="customers">
+                          <Customers />
+                        </RequirePermission>
+                      }
+                    />
+                    <Route
+                      path="/customers/new"
+                      element={
+                        <RequirePermission permission="customers">
+                          <CustomerForm />
+                        </RequirePermission>
+                      }
+                    />
+                    <Route
+                      path="/customers/edit/:id"
+                      element={
+                        <RequirePermission permission="customers">
+                          <CustomerForm />
+                        </RequirePermission>
+                      }
+                    />
 
-                    <Route path="/reports" element={<Reports />} />
-                    <Route path="/settings" element={<Settings />} />
-                    <Route path="/admin" element={<Admin />} />
+                    <Route
+                      path="/billing"
+                      element={
+                        <RequirePermission permission="billing">
+                          <Billing />
+                        </RequirePermission>
+                      }
+                    />
+                    <Route path="/invoice/:id" element={<Invoice />} />
+                    <Route
+                      path="/billing-history"
+                      element={
+                        <RequirePermission permission="billing">
+                          <BillingHistory />
+                        </RequirePermission>
+                      }
+                    />
+
+                    <Route
+                      path="/reports"
+                      element={
+                        <RequirePermission permission="reports">
+                          <Reports />
+                        </RequirePermission>
+                      }
+                    />
+                    <Route path="/profile" element={<Profile />} />
+                    <Route
+                      path="/settings"
+                      element={
+                        <RequirePermission permission="settings">
+                          <Settings />
+                        </RequirePermission>
+                      }
+                    />
+                    {/* <Route
+                      path="/admin"
+                      element={
+                        <RequirePermission permission="admin">
+                          <Admin />
+                        </RequirePermission>
+                      }
+                    /> */}
+                    <Route
+                      path="/admin/staff/new"
+                      element={
+                        <RequirePermission permission="admin">
+                          <StaffForm />
+                        </RequirePermission>
+                      }
+                    />
+                    <Route
+                      path="/admin/staff"
+                      element={
+                        <RequirePermission permission="admin">
+                          <StaffManagement />
+                        </RequirePermission>
+                      }
+                    />
                   </Route>
+
+                  {/* Catch-all route for 404 */}
+                  <Route path="*" element={<NotFound />} />
                 </Routes>
               </Suspense>
             </div>
@@ -102,8 +201,6 @@ const App: React.FC = () => {
       <ToastContainer
         position="top-right"
         autoClose={3000}
-        pauseOnHover
-        theme="light"
       />
     </SidebarContext.Provider>
   );

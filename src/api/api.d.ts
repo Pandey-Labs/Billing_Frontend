@@ -1,9 +1,13 @@
 import type { Product, Customer, Invoice } from '../types';
 
+export interface ApiErrorDetails {
+  [key: string]: any;
+}
+
 export declare class ApiError extends Error {
   status: number;
-  details?: unknown;
-  constructor(message: string, status: number, details?: unknown);
+  details?: ApiErrorDetails;
+  constructor(message: string, status: number, details?: ApiErrorDetails);
 }
 
 export interface LoginResponse {
@@ -14,6 +18,7 @@ export interface LoginResponse {
     email?: string;
     name?: string;
     role?: string;
+    permissions?: string[];
   };
 }
 
@@ -32,6 +37,52 @@ export declare function register(payload: {
   city?: string;
   password?: string;
 }): Promise<{ token?: string; user?: any; [key: string]: any }>;
+
+export declare function getMyProfile(
+  options?: RequestInit & { token?: string },
+): Promise<{ user?: any; [key: string]: any }>;
+
+export declare function updateMyRazorpayKeyId(
+  payload: { razorpayKeyId: string },
+  options?: RequestInit & { token?: string },
+): Promise<{ user?: any; [key: string]: any }>;
+
+export declare function createStaffUser(
+  payload: {
+    name: string;
+    email: string;
+    password: string;
+    role: string;
+    permissions?: string[];
+  },
+  options?: RequestInit & { token?: string },
+): Promise<{ id: string; name: string; email: string; role: string; permissions: string[] }>;
+
+export declare function getStaffUsers(
+  options?: RequestInit & { token?: string },
+): Promise<{ staff: Array<{ _id: string; name: string; email: string; role: string; permissions: string[]; status: string; createdAt: string }> }>;
+
+export declare function updateStaffUser(
+  id: string,
+  payload: {
+    name?: string;
+    email?: string;
+    role?: string;
+    permissions?: string[];
+  },
+  options?: RequestInit & { token?: string },
+): Promise<{ id: string; name: string; email: string; role: string; permissions: string[] }>;
+
+export declare function deleteStaffUser(
+  id: string,
+  options?: RequestInit & { token?: string },
+): Promise<{ success: boolean }>;
+
+export declare function toggleStaffStatus(
+  id: string,
+  status: 'active' | 'inactive',
+  options?: RequestInit & { token?: string },
+): Promise<{ success: boolean }>;
 
 export declare function getProducts(
   options?: RequestInit & { token?: string },

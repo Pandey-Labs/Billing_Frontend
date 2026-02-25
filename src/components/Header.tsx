@@ -13,6 +13,14 @@ const Header: React.FC = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  const roleLabel = (() => {
+    const role = String(user?.role || '').toLowerCase();
+    if (role === 'admin') return 'Admin';
+    if (role === 'staffadmin') return 'Staff Admin';
+    if (role === 'staff') return 'Staff';
+    return 'User';
+  })();
+
   const handleLogout = () => {
     dispatch(logout());
     toast.info('Logged out successfully');
@@ -118,7 +126,7 @@ const Header: React.FC = () => {
                   {user?.name || user?.username || 'Admin'}
                 </div>
                 <div className="text-muted" style={{ fontSize: '0.75rem', lineHeight: '1.2' }}>
-                  {user?.role || 'Administrator'}
+                  {roleLabel}
                 </div>
               </div>
               <i className="bi bi-chevron-down d-none d-md-block text-muted"></i>
@@ -143,13 +151,29 @@ const Header: React.FC = () => {
                   </div>
                 </li>
                 <li>
-                  <a className="dropdown-item d-flex align-items-center gap-2" href="#" onClick={(e) => { e.preventDefault(); setShowDropdown(false); }}>
+                  <a
+                    className="dropdown-item d-flex align-items-center gap-2"
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setShowDropdown(false);
+                      navigate("/profile");
+                    }}
+                  >
                     <i className="bi bi-person"></i>
                     Profile
                   </a>
                 </li>
                 <li>
-                  <a className="dropdown-item d-flex align-items-center gap-2" href="#" onClick={(e) => { e.preventDefault(); setShowDropdown(false); }}>
+                  <a
+                    className="dropdown-item d-flex align-items-center gap-2"
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setShowDropdown(false);
+                      navigate("/settings");
+                    }}
+                  >
                     <i className="bi bi-gear"></i>
                     Settings
                   </a>
