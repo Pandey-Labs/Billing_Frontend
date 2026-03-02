@@ -30,16 +30,14 @@ const FilterModal: React.FC<FilterModalProps> = ({
     uniquePaymentMethods,
     onResetFilters,
 }) => {
-
-
     const handleReset = () => {
         onResetFilters()
         onHide()
     }
 
     return (
-        <Modal 
-            show={show} 
+        <Modal
+            show={show}
             onHide={onHide}
             centered
             size="lg"
@@ -50,15 +48,15 @@ const FilterModal: React.FC<FilterModalProps> = ({
                     <i className="bi bi-funnel"></i>
                     Filter Sales Report
                 </Modal.Title>
-                <Button 
-                    variant="light" 
-                    className="btn-close-white ms-auto" 
+                <Button
+                    variant="light"
+                    className="btn-close-white ms-auto"
                     onClick={onHide}
                 >
                     <i className="bi bi-x-lg"></i>
                 </Button>
             </Modal.Header>
-            
+
             <Modal.Body className="p-4">
                 <Form>
                     {/* Date Range Filter */}
@@ -151,11 +149,11 @@ const FilterModal: React.FC<FilterModalProps> = ({
                     </div> */}
                 </Form>
             </Modal.Body>
-            
+
             <Modal.Footer className="bg-light">
                 <div className="d-flex justify-content-between w-100">
-                    <Button 
-                        variant="outline-secondary" 
+                    <Button
+                        variant="outline-secondary"
                         onClick={handleReset}
                         className="d-flex align-items-center gap-2"
                     >

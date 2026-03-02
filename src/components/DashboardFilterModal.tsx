@@ -31,16 +31,14 @@ const DashboardFilterModal: React.FC<DashboardFilterModalProps> = ({
     setEndDate,
     onResetFilters,
 }) => {
-
-
     const handleReset = () => {
         onResetFilters()
         onHide()
     }
 
     return (
-        <Modal 
-            show={show} 
+        <Modal
+            show={show}
             onHide={onHide}
             centered
             size="lg"
@@ -51,15 +49,15 @@ const DashboardFilterModal: React.FC<DashboardFilterModalProps> = ({
                     <i className="bi bi-funnel"></i>
                     Dashboard Filters
                 </Modal.Title>
-                <Button 
-                    variant="light" 
-                    className="btn-close-white ms-auto" 
+                <Button
+                    variant="light"
+                    className="btn-close-white ms-auto"
                     onClick={onHide}
                 >
                     <i className="bi bi-x-lg"></i>
                 </Button>
             </Modal.Header>
-            
+
             <Modal.Body className="p-4">
                 <Form>
                     {/* Date Range Filter */}
@@ -148,11 +146,11 @@ const DashboardFilterModal: React.FC<DashboardFilterModalProps> = ({
                     </div> */}
                 </Form>
             </Modal.Body>
-            
+
             <Modal.Footer className="bg-light">
                 <div className="d-flex justify-content-between w-100">
-                    <Button 
-                        variant="outline-secondary" 
+                    <Button
+                        variant="outline-secondary"
                         onClick={handleReset}
                         className="d-flex align-items-center gap-2"
                     >
