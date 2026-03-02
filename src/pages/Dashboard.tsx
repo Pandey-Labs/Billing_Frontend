@@ -55,66 +55,66 @@ const Dashboard: React.FC = () => {
       console.log('[Dashboard] Fetching dashboard data from API...');
       const data = await getDashboard({ token });
       console.log('[Dashboard] Data received:', data);
-      
+
       // Validate API response
       if (!data || typeof data !== 'object') {
         throw new Error('Invalid API response format');
       }
-        
-        // Update sales in Redux store - map to ensure all required fields are present
-        if (data && data.sales && Array.isArray(data.sales)) {
-          const mappedSales = data.sales.map((sale) => ({
-            id: sale.id,
-            date: sale.date,
-            total: sale.total || 0,
-            paymentMethod: sale.paymentMethod || "Cash",
-            items: sale.items || [],
-            subtotal: sale.subtotal || 0,
-            tax: sale.tax || 0,
-            discount: sale.discount || 0,
-            customer: (sale.customer && typeof sale.customer === 'object' && 'id' in sale.customer && 'name' in sale.customer) 
-              ? sale.customer as { id: string; name: string; phone?: string; email?: string }
-              : null,
-            refund: 0,
-            netTotal: sale.total || 0,
-            profit: 0,
-              status: 'completed' as const,
-          }));
-          dispatch(setSales(mappedSales));
-          console.log('[Dashboard] Sales updated in Redux:', mappedSales.length, 'items');
-        } else {
-          console.warn('[Dashboard] No sales data in response');
-          dispatch(setSales([]));
-        }
-        
-        // Update products in Redux store (if not already loaded)
-        if (data && data.products && Array.isArray(data.products)) {
-          console.log('[Dashboard] Products data received:', data.products.length, 'items');
-          // Check if products are already loaded, if not fetch them
-          if (products.length === 0) {
-            console.log('[Dashboard] Fetching products...');
-            dispatch(fetchProducts());
-          }
-        } else {
-          console.warn('[Dashboard] No products data in response');
-        }
-        setHasApiError(false);
-      } catch (err) {
-        console.error("[Dashboard] Failed to fetch dashboard data:", err);
-        setHasApiError(true);
-        if (err instanceof ApiError) {
-          console.error("[Dashboard] API Error:", err.status, err.message);
-          setError(`API Error (${err.status}): ${err.message}`);
-        } else if (err instanceof Error) {
-          console.error("[Dashboard] Error:", err.message);
-          setError(`Failed to load dashboard data: ${err.message}`);
-        } else {
-          setError("Failed to load dashboard data. The API response could not be handled.");
-        }
-      } finally {
-        setLoading(false);
+
+      // Update sales in Redux store - map to ensure all required fields are present
+      if (data && data.sales && Array.isArray(data.sales)) {
+        const mappedSales = data.sales.map((sale) => ({
+          id: sale.id,
+          date: sale.date,
+          total: sale.total || 0,
+          paymentMethod: sale.paymentMethod || "Cash",
+          items: sale.items || [],
+          subtotal: sale.subtotal || 0,
+          tax: sale.tax || 0,
+          discount: sale.discount || 0,
+          customer: (sale.customer && typeof sale.customer === 'object' && 'id' in sale.customer && 'name' in sale.customer)
+            ? sale.customer as { id: string; name: string; phone?: string; email?: string }
+            : null,
+          refund: 0,
+          netTotal: sale.total || 0,
+          profit: 0,
+          status: 'completed' as const,
+        }));
+        dispatch(setSales(mappedSales));
+        console.log('[Dashboard] Sales updated in Redux:', mappedSales.length, 'items');
+      } else {
+        console.warn('[Dashboard] No sales data in response');
+        dispatch(setSales([]));
       }
-    };
+
+      // Update products in Redux store (if not already loaded)
+      if (data && data.products && Array.isArray(data.products)) {
+        console.log('[Dashboard] Products data received:', data.products.length, 'items');
+        // Check if products are already loaded, if not fetch them
+        if (products.length === 0) {
+          console.log('[Dashboard] Fetching products...');
+          dispatch(fetchProducts());
+        }
+      } else {
+        console.warn('[Dashboard] No products data in response');
+      }
+      setHasApiError(false);
+    } catch (err) {
+      console.error("[Dashboard] Failed to fetch dashboard data:", err);
+      setHasApiError(true);
+      if (err instanceof ApiError) {
+        console.error("[Dashboard] API Error:", err.status, err.message);
+        setError(`API Error (${err.status}): ${err.message}`);
+      } else if (err instanceof Error) {
+        console.error("[Dashboard] Error:", err.message);
+        setError(`Failed to load dashboard data: ${err.message}`);
+      } else {
+        setError("Failed to load dashboard data. The API response could not be handled.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchDashboardData();
@@ -172,7 +172,7 @@ const Dashboard: React.FC = () => {
 
   const totalFilteredSales = useMemo(
     () => filteredSales.reduce((sum, d) => sum + (d.total || 0), 0),
-   [filteredSales]);
+    [filteredSales]);
 
   // Filter functions
   const handleResetFilters = () => {
@@ -374,7 +374,7 @@ const Dashboard: React.FC = () => {
   if (hasApiError && error) {
     return (
       <div className="dashboard-page themed-page py-4 px-3">
-        <ApiErrorFallback 
+        <ApiErrorFallback
           error={error}
           onRetry={fetchDashboardData}
           title="Unable to Load Dashboard"
@@ -443,25 +443,25 @@ const Dashboard: React.FC = () => {
               <i className="bi bi-box-arrow-right" style={{ fontSize: '1.2rem' }}></i>
             </Button>
             <div className="d-flex flex-column flex-md-row gap-3 filter-group">
-            <Button 
-              variant="outline-primary" 
-              className="glow-control d-flex align-items-center gap-2"
-              onClick={() => setShowFilterModal(true)}
-            >
-              <i className="bi bi-funnel"></i>
-              Filter
-            </Button>
-            <Form.Select
-              value={chartType}
-              onChange={(e) => setChartType(e.target.value as ChartType)}
-              className="glow-control"
-            >
-              {chartTypes.map((type) => (
-                <option key={type.value} value={type.value}>
-                  {type.label} chart
-                </option>
-              ))}
-            </Form.Select>
+              <Button
+                variant="outline-primary"
+                className="glow-control d-flex align-items-center gap-2"
+                onClick={() => setShowFilterModal(true)}
+              >
+                <i className="bi bi-funnel"></i>
+                Filter
+              </Button>
+              <Form.Select
+                value={chartType}
+                onChange={(e) => setChartType(e.target.value as ChartType)}
+                className="glow-control"
+              >
+                {chartTypes.map((type) => (
+                  <option key={type.value} value={type.value}>
+                    {type.label} chart
+                  </option>
+                ))}
+              </Form.Select>
             </div>
           </div>
         </div>
@@ -593,7 +593,7 @@ const Dashboard: React.FC = () => {
           </Card>
         </Col>
       </Row> */}
-      
+
       {/* Dashboard Filter Modal */}
       <DashboardFilterModal
         show={showFilterModal}

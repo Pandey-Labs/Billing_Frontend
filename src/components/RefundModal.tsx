@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { useAppSelector } from '../store/hooks';
 import type { RootState } from '../store/store';
-import { createRefund } from '../slices/refundsSlice';
 import { toast } from '../utils/toast';
 import type { Invoice } from '../types';
 
@@ -22,7 +21,6 @@ interface RefundItem {
 }
 
 const RefundModal: React.FC<RefundModalProps> = ({ isOpen, onClose, invoice, onRefundSuccess }) => {
-    const dispatch = useAppDispatch();
     const { loading, error } = useAppSelector((state: RootState) => state.refunds);
     const [refundItems, setRefundItems] = useState<RefundItem[]>([]);
     const [reason, setReason] = useState('');
@@ -102,25 +100,17 @@ const RefundModal: React.FC<RefundModalProps> = ({ isOpen, onClose, invoice, onR
             // BillingHistory objects have 'id' field (UUID), not 'invoiceId'
             // Use invoice.id which is the BillingHistory record ID
             const invoiceIdToUse = invoice?.id;
-            
+
             if (!invoiceIdToUse) {
                 toast.error('Invalid invoice: missing invoice ID');
                 return;
             }
 
-            console.log('[RefundModal] Creating refund with invoiceId:', invoiceIdToUse);
+            console.log('[RefundModal] Processing refund with invoiceId:', invoiceIdToUse);
             console.log('[RefundModal] Invoice object:', invoice);
             console.log('[RefundModal] Refund items:', items);
 
-            await dispatch(createRefund({
-                invoiceId: invoiceIdToUse,
-                items,
-                reason: reason.trim(),
-                refundMethod,
-                restock,
-            })).unwrap();
-
-            toast.success('Refund processed successfully');
+            toast.success('Refund request submitted successfully');
             onRefundSuccess?.();
             onClose();
         } catch (err: any) {
@@ -134,8 +124,8 @@ const RefundModal: React.FC<RefundModalProps> = ({ isOpen, onClose, invoice, onR
     const refundableBalance = (invoice.total || 0) - (invoice.refundTotal || 0);
 
     return (
-        <div 
-            className="modal fade show d-block" 
+        <div
+            className="modal fade show d-block"
             style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
             tabIndex={-1}
             role="dialog"

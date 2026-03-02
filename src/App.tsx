@@ -1,4 +1,4 @@
-import React, { useState, lazy, Suspense } from "react";
+import { useState, lazy, Suspense, createContext, useContext } from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
 import { ToastContainer } from "./utils/toast";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -21,7 +21,10 @@ const Billing = lazy(() => import("./pages/Billing"));
 const Invoice = lazy(() => import("./pages/Invoice"));
 const Reports = lazy(() => import("./pages/Reports"));
 const Settings = lazy(() => import("./pages/Settings"));
+<<<<<<< HEAD
 // const Admin = lazy(() => import("./pages/Admin")); // Uncomment if used
+=======
+>>>>>>> 3c65ed6aa0eb753083fe7a4299ba21eaae3555bc
 const BillingHistory = lazy(() => import("./pages/BillingHistory"));
 const Profile = lazy(() => import("./pages/Profile"));
 const StaffForm = lazy(() => import("./pages/StaffForm"));
@@ -36,7 +39,7 @@ type SidebarContextType = {
   setSidebarClass: (c: string) => void;
 };
 
-export const SidebarContext = React.createContext<SidebarContextType>({
+export const SidebarContext = createContext<SidebarContextType>({
   sidebarClass: "",
   setSidebarClass: () => { },
 });
@@ -44,25 +47,20 @@ export const SidebarContext = React.createContext<SidebarContextType>({
 const App: React.FC = () => {
   const [sidebarClass, setSidebarClass] = useState("collapsed");
   const location = useLocation();
-  const isLoginPage = location.pathname === "/";
+  const publicRoutes = ["/", "/notfound"];
+  const isPublicPage = publicRoutes.includes(location.pathname.toLowerCase());
 
   console.log("VITE_API_URL:", import.meta.env.VITE_API_URL);
 
   return (
     <SidebarContext.Provider value={{ sidebarClass, setSidebarClass }}>
       <div className="d-flex flex-column" style={{ minHeight: "100vh" }}>
-        {!isLoginPage && <Header />}
+        {!isPublicPage && <Header />}
 
         <div className="d-flex flex-grow-1">
-          {!isLoginPage && <SidebarWithContext />}
+          {!isPublicPage && <SidebarWithContext />}
 
-          <div
-            className={`flex-grow-1 d-flex flex-column ${!isLoginPage
-                ? `content-with-sidebar${sidebarClass === "collapsed" ? " collapsed" : ""
-                }`
-                : ""
-              }`}
-          >
+          <div className={`flex-grow-1 d-flex flex-column ${!isPublicPage ? `content-with-sidebar${sidebarClass === "collapsed" ? " collapsed" : ""}` : ""}`}>
             <div className="flex-grow-1">
               {/* =======================
                  ROUTES WITH SUSPENSE
@@ -191,7 +189,7 @@ const App: React.FC = () => {
               </Suspense>
             </div>
 
-            {!isLoginPage && <Footer />}
+            {!isPublicPage && <Footer />}
           </div>
         </div>
       </div>
@@ -208,7 +206,7 @@ const App: React.FC = () => {
    SIDEBAR WRAPPER
 ======================= */
 const SidebarWithContext: React.FC = () => {
-  const { setSidebarClass } = React.useContext(SidebarContext);
+  const { setSidebarClass } = useContext(SidebarContext);
   return <Sidebar onSidebarClassChange={setSidebarClass} />;
 };
 

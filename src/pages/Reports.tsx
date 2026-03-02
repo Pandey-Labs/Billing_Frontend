@@ -17,7 +17,7 @@ const Reports: React.FC = () => {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [hasApiError, setHasApiError] = useState(false)
-    
+
     // Filter states
     const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'weekly' | 'monthly' | 'custom'>('all')
     const [startDate, setStartDate] = useState('')
@@ -32,19 +32,19 @@ const Reports: React.FC = () => {
             setError(null)
             setHasApiError(false)
             const data = await getSalesReport({ token })
-            
+
             // Validate API response
             if (!data || !Array.isArray(data)) {
                 throw new Error('Invalid API response format')
             }
-            
+
             // Map API response to match EnhancedInvoice type with calculated values
             const mappedSales: EnhancedInvoice[] = data.map((sale) => {
                 const refund = sale.refundTotal || 0
                 const netTotal = (sale.total || 0) - refund
                 // Calculate profit (assuming 70% cost margin - you can adjust this)
                 const profit = netTotal * 0.7
-                
+
                 return {
                     ...sale,
                     refund: refund,
@@ -53,7 +53,7 @@ const Reports: React.FC = () => {
                     status: refund > 0 ? (refund >= sale.total ? 'refunded' : 'partial_refund') : 'completed',
                 }
             })
-            
+
             dispatch(setSales(mappedSales))
             setHasApiError(false)
         } catch (err) {
@@ -98,13 +98,13 @@ const Reports: React.FC = () => {
     // Filter sales data based on selected filters
     const filteredSales = useMemo(() => {
         let filtered = [...sales]
-        
+
         // Date filtering
         if (dateFilter !== 'all') {
             const now = new Date()
             let start: Date
             let end: Date
-            
+
             switch (dateFilter) {
                 case 'today':
                     start = new Date(now.getFullYear(), now.getMonth(), now.getDate())
@@ -131,18 +131,18 @@ const Reports: React.FC = () => {
                 default:
                     return filtered
             }
-            
+
             filtered = filtered.filter(sale => {
                 const saleDate = new Date(sale.date)
                 return saleDate >= start && saleDate <= end
             })
         }
-        
+
         // Payment method filtering
         if (paymentMethodFilter !== 'all') {
             filtered = filtered.filter(sale => sale.paymentMethod === paymentMethodFilter)
         }
-        
+
         return filtered
     }, [sales, dateFilter, startDate, endDate, paymentMethodFilter])
 
@@ -156,21 +156,20 @@ const Reports: React.FC = () => {
         const totalRefund = filteredSales.reduce((s, x: EnhancedInvoice) => s + (x.refund || 0), 0)
         const totalNet = filteredSales.reduce((s, x: EnhancedInvoice) => s + (x.netTotal || 0), 0)
         const totalProfit = filteredSales.reduce((s, x: EnhancedInvoice) => s + (x.profit || 0), 0)
-        
-        return { 
-            total, 
-            totalInvoices, 
-            avgOrderValue, 
-            totalTax, 
-            totalDiscount, 
-            totalRefund, 
-            totalNet, 
-            totalProfit 
+
+        return {
+            total,
+            totalInvoices,
+            avgOrderValue,
+            totalTax,
+            totalDiscount,
+            totalRefund,
+            totalNet,
+            totalProfit
         }
     }, [filteredSales])
 
     // Filter functions
-
     const handleResetFilters = () => {
         setDateFilter('all')
         setStartDate('')
@@ -237,10 +236,10 @@ const Reports: React.FC = () => {
             date.setDate(date.getDate() - (6 - i))
             return date.toISOString().slice(0, 10)
         })
-        
+
         const salesByDate = new Map<string, number>()
         const profitByDate = new Map<string, number>()
-        
+
         filteredSales.forEach(sale => {
             const date = sale.date ? new Date(sale.date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10)
             if (last7Days.includes(date)) {
@@ -260,7 +259,7 @@ const Reports: React.FC = () => {
     const handleExport = async () => {
         if (exportType === 'excel' || exportType === 'csv') {
             const XLSX = await import('xlsx')
-            
+
             // Prepare data for export
             const exportData = filteredSales.map((s: EnhancedInvoice) => ({
                 Invoice: s.id,
@@ -276,7 +275,7 @@ const Reports: React.FC = () => {
                 Status: s.status.charAt(0).toUpperCase() + s.status.slice(1).replace('_', ' '),
                 Payment: s.paymentMethod || 'Cash',
             }))
-            
+
             // Add total row
             exportData.push({
                 Invoice: 'TOTAL',
@@ -292,11 +291,11 @@ const Reports: React.FC = () => {
                 Status: '',
                 Payment: '',
             })
-            
+
             const ws = XLSX.utils.json_to_sheet(exportData)
             const wb = XLSX.utils.book_new()
             XLSX.utils.book_append_sheet(wb, ws, 'Sales Report')
-            
+
             // Add profit summary sheet
             const profitSummary = [
                 { Metric: 'Total Revenue', Amount: stats.total.toFixed(2) },
@@ -309,7 +308,7 @@ const Reports: React.FC = () => {
             ]
             const profitWs = XLSX.utils.json_to_sheet(profitSummary)
             XLSX.utils.book_append_sheet(wb, profitWs, 'Profit Summary')
-            
+
             if (exportType === 'excel') {
                 XLSX.writeFile(wb, 'sales-report.xlsx')
             } else {
@@ -319,18 +318,18 @@ const Reports: React.FC = () => {
             const jsPDFModule = await import('jspdf')
             const { default: jsPDF } = jsPDFModule
             const jspdfAutotable = await import('jspdf-autotable')
-            
+
             const doc = new jsPDF()
-            
+
             // Add title
             doc.setFontSize(16)
             doc.text('Sales Report', 14, 15)
-            
+
             doc.setFontSize(12)
             doc.text(`Total Revenue: ₹${stats.total.toFixed(2)}`, 14, 25)
             doc.text(`Total Profit: ₹${stats.totalProfit.toFixed(2)}`, 14, 32)
             doc.text(`Total Invoices: ${stats.totalInvoices}`, 14, 39)
-            
+
             // Prepare table data
             const tableData = filteredSales.map((s: EnhancedInvoice) => [
                 s.id,
@@ -343,7 +342,7 @@ const Reports: React.FC = () => {
                 s.status.charAt(0).toUpperCase() + s.status.slice(1).replace('_', ' '),
                 s.paymentMethod || 'Cash',
             ])
-            
+
             // Add total row
             tableData.push([
                 'TOTAL',
@@ -356,7 +355,7 @@ const Reports: React.FC = () => {
                 '',
                 '',
             ])
-            
+
             // Add table
             jspdfAutotable.default(doc, {
                 head: [['Invoice', 'Date', 'Customer', 'Total', 'Refund', 'Net', 'Profit', 'Status', 'Payment']],
@@ -367,7 +366,7 @@ const Reports: React.FC = () => {
                 styles: { fontSize: 8 },
                 headStyles: { fillColor: [59, 130, 246], textColor: 255 },
             })
-            
+
             doc.save('sales-report.pdf')
         }
     }
@@ -395,7 +394,7 @@ const Reports: React.FC = () => {
     if (hasApiError && error) {
         return (
             <div className="reports-page themed-page py-4 px-3">
-                <ApiErrorFallback 
+                <ApiErrorFallback
                     error={error}
                     onRetry={fetchSales}
                     title="Unable to Load Sales Reports"
@@ -432,8 +431,8 @@ const Reports: React.FC = () => {
                     </div>
                 </div>
                 <div className="col-12 col-lg-4 d-flex align-items-start justify-content-lg-end gap-2">
-                    <Button 
-                        variant="outline-primary" 
+                    <Button
+                        variant="outline-primary"
                         className="shadow-sm d-flex align-items-center gap-2"
                         onClick={() => setShowFilterModal(true)}
                     >
@@ -529,7 +528,7 @@ const Reports: React.FC = () => {
                                 </thead>
                                 <tbody>
                                     {filteredSales.map((sale: EnhancedInvoice) => (
-                                        
+
                                         <tr key={sale.id} style={{ transition: 'background-color 0.2s ease' }}>
                                             <td className="fw-semibold ps-4 py-3">{sale.id}</td>
                                             <td className="py-3">{new Date(sale.date).toLocaleString()}</td>
@@ -539,12 +538,11 @@ const Reports: React.FC = () => {
                                             <td className="py-3 fw-semibold text-end text-success">₹{sale.netTotal.toFixed(2)}</td>
                                             <td className="py-3 fw-semibold text-end text-info">₹{sale.profit.toFixed(2)}</td>
                                             <td className="py-3 text-center">
-                                                <span className={`badge ${
-                                                    sale.status === 'completed' ? 'bg-success' : 
-                                                    sale.status === 'refunded' ? 'bg-danger' : 
-                                                    sale.status === 'partial_refund' ? 'bg-warning' : 
-                                                    'bg-secondary'
-                                                }`}>
+                                                <span className={`badge ${sale.status === 'completed' ? 'bg-success' :
+                                                    sale.status === 'refunded' ? 'bg-danger' :
+                                                        sale.status === 'partial_refund' ? 'bg-warning' :
+                                                            'bg-secondary'
+                                                    }`}>
                                                     {sale.status.charAt(0).toUpperCase() + sale.status.slice(1).replace('_', ' ')}
                                                 </span>
                                             </td>
@@ -571,7 +569,7 @@ const Reports: React.FC = () => {
                     )}
                 </Card.Body>
             </Card>
-            
+
             {/* Filter Modal */}
             <FilterModal
                 show={showFilterModal}
