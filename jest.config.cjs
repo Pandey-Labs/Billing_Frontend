@@ -4,14 +4,19 @@ module.exports = {
   roots: ['<rootDir>/src'],
   testMatch: ['**/__tests__/**/*.ts?(x)', '**/?(*.)+(spec|test).ts?(x)'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
-  globals: {
-    'ts-jest': {
-      tsconfig: {
-        jsx: 'react-jsx',
-        esModuleInterop: true,
-        allowSyntheticDefaultImports: true,
+  transform: {
+    '^.+\\.(ts|tsx|js|jsx)$': [
+      'ts-jest',
+      {
+        tsconfig: {
+          jsx: 'react-jsx',
+          esModuleInterop: true,
+          allowSyntheticDefaultImports: true,
+          allowJs: true,
+          types: ['jest', '@testing-library/jest-dom', 'node'],
+        },
       },
-    },
+    ],
   },
   setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
   moduleNameMapper: {
@@ -20,6 +25,9 @@ module.exports = {
   testPathIgnorePatterns: [
     '/node_modules/',
     '/dist/',
+  ],
+  transformIgnorePatterns: [
+    'node_modules/(?!(uuid|@reduxjs)/)',
   ],
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',

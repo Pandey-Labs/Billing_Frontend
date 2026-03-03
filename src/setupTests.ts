@@ -1,5 +1,31 @@
 import '@testing-library/jest-dom';
 
+// Mock api module before any other imports
+jest.mock('./api/api', () => {
+  class ApiError extends Error {
+    status: number;
+    constructor(message: string, status: number) {
+      super(message);
+      this.status = status;
+      this.name = 'ApiError';
+    }
+  }
+  
+  return {
+    createInvoice: jest.fn(() => Promise.resolve({ success: true })),
+    getCustomers: jest.fn(() => Promise.resolve([])),
+    getMyProfile: jest.fn(() => Promise.resolve({ user: { razorpayKeyId: 'test_key' } })),
+    getProductByBarcode: jest.fn(() => Promise.resolve(null)),
+    request: jest.fn(() => Promise.resolve({})),
+    ApiError: ApiError,
+  };
+});
+
+// Mock uuid before any other imports
+jest.mock('uuid', () => ({
+  v4: jest.fn(() => 'test-uuid-123'),
+}));
+
 declare global {
   namespace jest {
     interface Matchers<R> {
