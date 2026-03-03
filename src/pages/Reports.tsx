@@ -539,9 +539,9 @@ const Reports: React.FC = () => {
                                             <td className="py-3 fw-semibold text-end text-info">₹{sale.profit.toFixed(2)}</td>
                                             <td className="py-3 text-center">
                                                 <span className={`badge ${sale.status === 'completed' ? 'bg-success' :
-                                                        sale.status === 'refunded' ? 'bg-danger' :
-                                                            sale.status === 'partial_refund' ? 'bg-warning' :
-                                                                'bg-secondary'
+                                                    sale.status === 'refunded' ? 'bg-danger' :
+                                                        sale.status === 'partial_refund' ? 'bg-warning' :
+                                                            'bg-secondary'
                                                     }`}>
                                                     {sale.status.charAt(0).toUpperCase() + sale.status.slice(1).replace('_', ' ')}
                                                 </span>
