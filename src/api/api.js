@@ -12,7 +12,7 @@ const resolveBaseUrl = () => {
 
   if (typeof viteUrl === 'string' && viteUrl.trim()) {
     const baseUrl = viteUrl.trim().replace(/\/+$/, '');
-    if (mode === 'development') console.log(`[API] Using ${mode} environment (import.meta.env): ${baseUrl}`);
+    console.log(`[API] Using ${mode} environment (import.meta.env): ${baseUrl}`);
     return baseUrl;
   }
 
